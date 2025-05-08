@@ -4,7 +4,7 @@ chromadb
 langchain
 langchain-community
 langchain-groq
-openai
+sentence-transformers  # Free embeddings
 speechrecognition
 pyttsx3
 pillow
