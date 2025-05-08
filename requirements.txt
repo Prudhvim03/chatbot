@@ -4,9 +4,5 @@ chromadb
 langchain
 langchain-community
 langchain-groq
-sentence-transformers  # Free embeddings
-speechrecognition
-pyttsx3
-pillow
-easyocr
+sentence-transformers
 tavily-python
