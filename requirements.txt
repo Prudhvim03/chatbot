@@ -1,8 +1,8 @@
 streamlit
 groq
-chromadb
 langchain
 langchain-community
 langchain-groq
 sentence-transformers
 tavily-python
+faiss-cpu
