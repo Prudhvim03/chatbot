@@ -8,11 +8,11 @@ from tavily import TavilyClient
 import os
 import time
 
-# --- SET API KEYS ---
-os.environ["GROQ_API_KEY"] = "YOUR_GROQ_API_KEY"  # Replace with your Groq API key
+# --- Set your API keys here ---
+os.environ["GROQ_API_KEY"] = "YOUR_GROQ_API_KEY"      # Replace with your Groq API key
 os.environ["TAVILY_API_KEY"] = "YOUR_TAVILY_API_KEY"  # Replace with your Tavily API key
 
-# --- FARMING KNOWLEDGE BASE ---
+# --- Farming knowledge base documents ---
 documents = [
     "Maize requires well-drained soil and regular watering.",
     "Rice thrives in flooded fields and warm climates.",
@@ -22,26 +22,27 @@ documents = [
     "Drip irrigation conserves water and improves crop yields.",
 ]
 
-# --- SET UP CHROMADB VECTOR STORE ---
+# --- Setup embeddings and vector store ---
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = Chroma.from_texts(documents, embeddings)
 retriever = vectorstore.as_retriever()
 
-# --- SET UP LLM AND RAG PIPELINE ---
-llm = ChatGroq(model_name="llama3-70b-8192")  # Free tier model
-prompt = ChatPromptTemplate.from_template(
-    "You are an expert farming assistant. Use the following context to answer the user's question."
-    "\n\nContext: {context}"
-    "\nQuestion: {question}"
-    "\nAnswer:"
-)
+# --- Setup Groq LLM and prompt ---
+llm = ChatGroq(model_name="llama3-70b-8192")  # Use a free Groq model
+prompt_template = """You are a helpful farming assistant. Use the following context to answer the user's question.
+Context: {context}
+Question: {question}
+Answer:"""
+prompt = ChatPromptTemplate.from_template(prompt_template)
+
+# --- Build RAG chain ---
 rag_chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
     | llm
 )
 
-# --- TAVILY CLIENT FOR REFERENCES ---
+# --- Tavily client for web references ---
 tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
 def get_references(query, max_results=3):
@@ -58,8 +59,8 @@ def get_references(query, max_results=3):
     except Exception:
         return []
 
-# --- STREAMLIT UI ---
-st.set_page_config(page_title="🌾 Farming Solutions Chatbot", layout="wide")
+# --- Streamlit UI ---
+st.set_page_config(page_title="Farming Solutions Chatbot", layout="wide")
 st.title("🌾 Farming Solutions Chatbot")
 
 # Initialize chat history
@@ -72,21 +73,19 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # User input
-if prompt := st.chat_input("Ask your farming question here..."):
+if prompt_text := st.chat_input("Ask your farming question here..."):
     # Display user message
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.chat_message("user").markdown(prompt_text)
+    st.session_state.messages.append({"role": "user", "content": prompt_text})
 
-    # Generate bot response (simulate streaming)
+    # Generate bot response with streaming effect
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
 
-        # Call RAG chain
-        response = rag_chain.invoke(prompt)
+        response = rag_chain.invoke(prompt_text)
         answer = response.content.strip()
 
-        # Display response word by word
         for word in answer.split():
             full_response += word + " "
             placeholder.markdown(full_response + "▌")
@@ -96,7 +95,7 @@ if prompt := st.chat_input("Ask your farming question here..."):
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
     # Fetch and display references
-    references = get_references(prompt)
+    references = get_references(prompt_text)
     if references:
         st.markdown("### 🔗 References")
         for ref in references:
