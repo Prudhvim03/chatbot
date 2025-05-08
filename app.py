@@ -1,6 +1,6 @@
 import streamlit as st
 from langchain_groq import ChatGroq
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -22,13 +22,13 @@ documents = [
     "Drip irrigation conserves water and improves crop yields.",
 ]
 
-# --- Setup embeddings and vector store ---
+# --- Setup embeddings and vector store (FAISS) ---
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-vectorstore = Chroma.from_texts(documents, embeddings)
+vectorstore = FAISS.from_texts(documents, embeddings)
 retriever = vectorstore.as_retriever()
 
 # --- Setup Groq LLM and prompt ---
-llm = ChatGroq(model_name="llama3-70b-8192")  # Use a free Groq model
+llm = ChatGroq(model_name="llama3-70b-8192")  # Or "mixtral-8x7b-32768"
 prompt_template = """You are a helpful farming assistant. Use the following context to answer the user's question.
 Context: {context}
 Question: {question}
