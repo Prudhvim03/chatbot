@@ -1,0 +1,12 @@
+streamlit
+groq
+chromadb
+langchain
+langchain-community
+langchain-groq
+openai
+speechrecognition
+pyttsx3
+pillow
+easyocr
+tavily-python
