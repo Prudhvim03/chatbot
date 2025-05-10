@@ -4,17 +4,15 @@ from dotenv import load_dotenv
 from PIL import Image
 import base64
 import time
-
-# NLP and Vision imports
 import numpy as np
-import speech_recognition as sr
 
-# Optional: OpenCV for advanced image processing
+# For image processing (optional, not required for basic image upload)
 try:
     import cv2
 except ImportError:
     cv2 = None
 
+from streamlit_mic_recorder import speech_to_text
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -92,20 +90,12 @@ st.markdown(futuristic_logo_svg, unsafe_allow_html=True)
 st.markdown('<div class="perplexity-title">Terrคi</div>', unsafe_allow_html=True)
 st.markdown('<div class="perplexity-subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image or use your voice!</div>', unsafe_allow_html=True)
 
-# --- Voice Input ---
-def recognize_voice():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("Listening... Please speak clearly.")
-        audio = recognizer.listen(source, timeout=5, phrase_time_limit=7)
-    try:
-        text = recognizer.recognize_google(audio)
-        return text
-    except Exception as e:
-        st.warning("Sorry, could not recognize your voice. Try again.")
-        return ""
+# --- Voice Input (browser-based, no server-side dependencies) ---
+voice_text = speech_to_text(language='en', use_container_width=True, just_once=True, key='voice_input')
+if voice_text:
+    st.session_state["query"] = voice_text
 
-# --- Perplexity-style search bar: text + paperclip + voice + submit ---
+# --- Perplexity-style search bar: text + paperclip + submit ---
 with st.form("query_form", clear_on_submit=False):
     st.markdown('<div class="searchbar-container">', unsafe_allow_html=True)
     st.markdown('<div class="searchbar-main">', unsafe_allow_html=True)
@@ -115,7 +105,6 @@ with st.form("query_form", clear_on_submit=False):
     uploaded_file = st.file_uploader(
         "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False, key="file"
     )
-    voice = st.form_submit_button("🎤", on_click=None)
     st.markdown(
         '<label for="file-upload" class="file-upload-label" title="Attach image">📎</label>',
         unsafe_allow_html=True
@@ -123,10 +112,6 @@ with st.form("query_form", clear_on_submit=False):
     submit = st.form_submit_button("➔", type="primary", use_container_width=False)
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-# --- Voice input logic ---
-if voice:
-    st.session_state["query"] = recognize_voice()
 
 # --- Image preview ---
 image_bytes = None
@@ -248,24 +233,25 @@ def show_typing():
         """.format(futuristic_logo_svg), unsafe_allow_html=True
     )
 
-if submit or voice:
-    if (user_query is None or user_query.strip() == "") and not uploaded_file:
+if submit or voice_text:
+    if (user_query is None or user_query.strip() == "") and not uploaded_file and not voice_text:
         st.warning("Please enter a question, upload an image, or use voice.")
     else:
-        st.session_state.messages.append({"role": "user", "content": user_query})
+        q = user_query if user_query else (voice_text or "")
+        st.session_state.messages.append({"role": "user", "content": q})
         st.experimental_rerun()  # To immediately show user message
 
         # Show typing indicator for realism
         show_typing()
         time.sleep(1.2)
 
-        if is_meta_query(user_query):
+        if is_meta_query(q):
             response = handle_meta_query()
             st.session_state.messages.append({"role": "assistant", "content": response})
         else:
             with st.spinner("Consulting AI experts..."):
-                rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
-                self_qa = get_self_qa(user_query)
+                rag_answer = get_rag_answer(q, image_bytes=image_bytes, image_filename=image_filename)
+                self_qa = get_self_qa(q)
                 full_answer = rag_answer + "<br><hr><b>Other questions you may have:</b><br>" + self_qa
                 st.session_state.messages.append({"role": "assistant", "content": full_answer})
         st.experimental_rerun()
