@@ -2,3 +2,4 @@ streamlit==1.32.2
 python-dotenv>=1.0.1
 langchain-groq>=0.1.4
 langchain-tavily>=0.1.2
+Pillow>=10.0.0
