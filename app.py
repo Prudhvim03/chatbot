@@ -231,7 +231,7 @@ if prompt:
 
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
+    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
