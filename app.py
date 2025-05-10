@@ -60,7 +60,7 @@ st.markdown("""
 # Header with icon and title
 st.markdown(f'<div class="rice-icon">{rice_icon_svg}</div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🌾 AI Agricultural Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Expert guidance for Indian rice farmers - powered by AI & real-time knowledge</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Expert guidance for Indian farmers - AI & real-time knowledge</div>', unsafe_allow_html=True)
 
 # Meta-question detection
 def is_meta_query(q):
@@ -69,14 +69,14 @@ def is_meta_query(q):
 
 def handle_meta_query():
     return (
-        "🌱 I was developed by Prudhvi, an engineer passionate about Indian agriculture and rice farming. "
-        "My mission is to empower  Indian farmers with practical, region-specific guidance for every stage of rice cultivation."
+        "🌱 I was developed by Prudhvi, an engineer passionate about Indian agriculture and farming. "
+        "My mission is to empower  Indian farmers with practical, region-specific guidance for every stage of  cultivation."
     )
 
 def get_rag_answer(question):
     # System prompt tailored for Indian/South Indian rice farming
     system_prompt = (
-        "You are a Indian agricultural expert specializing in rice farming. "
+        "You are a Indian agricultural expert specializing in farming. "
         "Give practical, region-specific, step-by-step advice using both your knowledge and the latest information from trusted Indian agricultural sources. "
         "Always explain in clear, simple language. If possible, mention local varieties, climate, and sustainable practices. "
         "If you don't know, say so and suggest how to find out."
@@ -97,13 +97,13 @@ def get_rag_answer(question):
 def get_self_qa(question):
     # Prompt LLM to generate self-questions and answers
     prompt = (
-        "Given this user question about Indian rice farming, generate 2-3 related follow-up questions a farmer might ask, "
+        "Given this user question about Indian farming, generate 2-3 related follow-up questions a farmer might ask, "
         "and answer each in detail, focusing on Indian context and practical steps. "
         "Format:\nQ1: ...\nA1: ...\nQ2: ...\nA2: ...\n"
         f"User question: {question}"
     )
     messages = [
-        SystemMessage(content="You are a helpful Indian rice farming assistant."),
+        SystemMessage(content="You are a helpful Indian farming assistant."),
         HumanMessage(content=prompt)
     ]
     response = llm.invoke(messages)
@@ -117,7 +117,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-prompt = st.chat_input("Ask your question on rice farming, soil, pests, irrigation, or anything Indian agriculture…")
+prompt = st.chat_input("Ask your question on farming, soil, pests, irrigation, or anything Indian agriculture…")
 
 if prompt:
     # User message
