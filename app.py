@@ -24,24 +24,27 @@ st.markdown("""
         .futuristic-logo {display: flex; justify-content: center; align-items: center; margin-bottom: -6px;}
         .main-title {text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem;}
         .subtitle {text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500;}
-        .perplexity-bar {position: relative; max-width: 700px; margin: auto; margin-bottom: 1.5rem;}
-        .perplexity-bar input[type="text"] {
-            width: 100%; font-size: 1.1rem; background: #f1f8e9; border: 2px solid #81c784;
-            border-radius: 12px; color: #2e7d32; padding: 12px 48px 12px 16px; outline: none;
+        .perplexity-row {display: flex; align-items: center; gap: 0.5rem; max-width: 700px; margin: 0 auto 1.5rem auto;}
+        .perplexity-row .stTextInput>div>div>input {
+            font-size: 1.1rem; background: #f1f8e9; border: 2px solid #81c784;
+            border-radius: 12px; color: #2e7d32; padding: 12px 16px;
         }
-        .perplexity-bar input[type="text"]:focus {border-color: #4caf50; box-shadow: 0 0 8px #a5d6a7;}
-        .perplexity-bar input[type="file"] {display: none;}
-        .perplexity-bar label[for="file-upload"] {
-            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; font-size: 1.5rem; color: #4caf50; user-select: none;
+        .perplexity-row .stTextInput>div>div>input:focus {
+            border-color: #4caf50; box-shadow: 0 0 8px #a5d6a7;
         }
-        .perplexity-bar label[for="file-upload"]:hover {color: #388e3c;}
+        .perplexity-row .stFileUploader {margin-bottom: 0;}
+        .perplexity-row .stFileUploader label span {
+            font-size: 1.5rem !important;
+            color: #4caf50 !important;
+            cursor: pointer;
+            margin-left: -1.5rem;
+        }
+        .perplexity-row .stFileUploader label span:hover {color: #388e3c !important;}
         .stButton>button {background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none;}
         .stButton>button:hover {background-color: #388e3c;}
         .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
         .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
         .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
-        .uploaded-img-preview {display: flex; justify-content: center; margin-top: 1rem;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -77,22 +80,24 @@ st.markdown(f'<div class="futuristic-logo">{futuristic_logo_svg}</div>', unsafe_
 st.markdown('<div class="main-title">🌾 Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Empowering Indian farmers with AI, real-time insights, and smart agriculture innovations</div>', unsafe_allow_html=True)
 
-# --- Perplexity-style search bar with paperclip (fallback below) ---
-st.markdown("""
-<div class="perplexity-bar">
-  <form id="perplexity-form" enctype="multipart/form-data">
-    <input type="text" id="search-input" name="search-input" placeholder="Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…" autocomplete="off"/>
-    <label for="file-upload" title="Attach an image">📎</label>
-    <input type="file" id="file-upload" name="file-upload" accept="image/png, image/jpeg" />
-  </form>
-</div>
-""", unsafe_allow_html=True)
-
-st.info("Or use the inputs below if the above bar doesn't work:")
-
-# --- Fallback: Streamlit input and file uploader ---
-user_query = st.text_input("Your question:")
-uploaded_file = st.file_uploader("Attach an image (plant, fertilizer, soil, etc.)", type=["png", "jpg", "jpeg"])
+# --- Perplexity-style search bar: text + paperclip in one row ---
+with st.container():
+    st.markdown('<div class="perplexity-row">', unsafe_allow_html=True)
+    col1, col2 = st.columns([8, 1])
+    with col1:
+        user_query = st.text_input(
+            "Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…",
+            key="query", label_visibility="collapsed", placeholder="Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…"
+        )
+    with col2:
+        uploaded_file = st.file_uploader(
+            "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False
+        )
+        st.markdown(
+            '<label for="perplexity-clip" style="position:absolute;top:12px;right:20px;cursor:pointer;font-size:1.5rem;color:#4caf50;">📎</label>',
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 image_bytes = None
 image_filename = None
