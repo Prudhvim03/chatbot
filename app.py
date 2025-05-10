@@ -24,6 +24,9 @@ st.markdown("""
         .futuristic-logo {display: flex; justify-content: center; align-items: center; margin-bottom: -6px;}
         .main-title {text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem;}
         .subtitle {text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500;}
+        .search-row {display: flex; align-items: center; gap: 0.5rem;}
+        .search-row input[type="text"] {flex: 1; font-size: 1.1rem; background: #f1f8e9; border: 2px solid #81c784; border-radius: 12px; color: #2e7d32; padding: 10px 14px;}
+        .search-row .stFileUploader {margin-bottom: 0;}
         .stButton>button {background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none;}
         .stButton>button:hover {background-color: #388e3c;}
         .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
@@ -80,14 +83,14 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     image_base64 = None
     if image_bytes:
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-    # --- Clear, explicit prompt for multimodal analysis ---
+    # --- Clear, explicit prompt ---
     system_prompt = (
         "You are an expert Indian agricultural advisor AI. "
         "You are given a user's question and a set of search results from trusted Indian sources."
         "\n\nIf the user has uploaded an image, analyze it carefully:"
-        "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
-        "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
-        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results."
+        "\n- If it is a plant, assess its health. If healthy, explain why and suggest fertilizers and modern techniques to improve growth. "
+        "If unhealthy, explain the problems you see, suggest fertilizers and precautions to restore health."
+        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it."
         "\n- If you cannot identify the image, say so politely and suggest how to get more help."
         "\n\nYour answer must follow this structure:"
         "\n1. **Image Analysis:** (if image provided) What is in the image and your assessment."
