@@ -3,6 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
 import base64
+import time
 
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
@@ -16,18 +17,18 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- CSS for Perplexity-style UI ---
+# --- Theme & Classic/Modern CSS ---
 st.markdown("""
     <style>
         body, .stApp {
-            background: #f9fafb !important;
+            background: var(--sky-background, #f9fafb) !important;
             font-family: 'Montserrat', 'Segoe UI', sans-serif;
         }
         .perplexity-logo {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 2.5rem;
+            margin-top: 2rem;
             margin-bottom: 0.5rem;
         }
         .perplexity-title {
@@ -35,7 +36,7 @@ st.markdown("""
             font-size: 2.5rem;
             font-weight: 700;
             color: #222;
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.3rem;
             letter-spacing: -1px;
         }
         .perplexity-subtitle {
@@ -48,7 +49,7 @@ st.markdown("""
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 2.2rem;
+            margin-bottom: 2rem;
         }
         .searchbar-main {
             display: flex;
@@ -102,13 +103,101 @@ st.markdown("""
         .searchbar-main .submit-btn:hover {
             background: #388e3c;
         }
-        .uploaded-img-preview {display: flex; justify-content: center; margin-top: 1rem;}
-        .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
-        .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
+        .quick-replies {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .quick-reply-btn {
+            background: #e8f5e9;
+            border: none;
+            color: #388e3c;
+            border-radius: 16px;
+            padding: 8px 18px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .quick-reply-btn:hover {
+            background: #a5d6a7;
+        }
+        .chat-avatar {
+            width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 2px solid #4caf50; display: inline-block; margin-right: 0.7rem; vertical-align: middle;
+        }
+        .chat-bubble {
+            display: flex; align-items: flex-start; margin-bottom: 1.1rem;
+        }
+        .chat-bubble.bot {
+            flex-direction: row;
+        }
+        .chat-bubble.user {
+            flex-direction: row-reverse;
+        }
+        .bubble-content {
+            background: #f9fbe7;
+            border-radius: 18px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px #a5d6a733;
+            color: #2e7d32;
+            font-size: 1.07rem;
+            max-width: 65vw;
+            min-width: 120px;
+        }
+        .bubble-content.user {
+            background: #c8e6c9;
+            color: #1b5e20;
+        }
+        .typing-indicator {
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 2px;
+            background: #81c784;
+            border-radius: 50%;
+            animation: blink 1.2s infinite both;
+        }
+        .typing-indicator span:nth-child(2) {animation-delay: 0.2s;}
+        .typing-indicator span:nth-child(3) {animation-delay: 0.4s;}
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.2; }
+            40% { opacity: 1; }
+        }
+        .emoji-picker {
+            margin-left: 0.5rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .darkmode-toggle {
+            position: fixed; top: 22px; right: 32px; z-index: 100;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Your Logo (SVG) ---
+# --- Dark Mode Toggle ---
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+def toggle_dark():
+    st.session_state.dark_mode = not st.session_state.dark_mode
+st.markdown(
+    f"<div class='darkmode-toggle'><button onclick='window.location.reload()' style='background:{'#222' if st.session_state.dark_mode else '#fff'};color:{'#fff' if st.session_state.dark_mode else '#4caf50'};border-radius:50%;border:none;width:38px;height:38px;font-size:1.3rem;cursor:pointer;'>{'🌙' if not st.session_state.dark_mode else '☀️'}</button></div>",
+    unsafe_allow_html=True
+)
+if st.session_state.dark_mode:
+    st.markdown("""
+        <style>
+            body, .stApp {background: #212121 !important;}
+            .searchbar-main, .bubble-content {background: #333 !important; color: #e8f5e9 !important;}
+            .bubble-content.user {background: #388e3c !important; color: #fff !important;}
+            .perplexity-title {color: #e8f5e9 !important;}
+        </style>
+    """, unsafe_allow_html=True)
+
+# --- Logo ---
 futuristic_logo_svg = """
 <div class="perplexity-logo">
 <svg width="60" height="60" viewBox="0 0 72 72" fill="none">
@@ -140,9 +229,27 @@ futuristic_logo_svg = """
 """
 st.markdown(futuristic_logo_svg, unsafe_allow_html=True)
 
-# --- Centered Title and Subtitle ---
 st.markdown('<div class="perplexity-title">Terrคi</div>', unsafe_allow_html=True)
 st.markdown('<div class="perplexity-subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image if you wish!</div>', unsafe_allow_html=True)
+
+# --- Quick Replies Example ---
+quick_replies = [
+    "How to improve rice yield?",
+    "Best fertilizer for tomatoes?",
+    "How to identify pest damage?",
+    "Soil health tips"
+]
+st.markdown('<div class="quick-replies">', unsafe_allow_html=True)
+for reply in quick_replies:
+    if st.button(reply, key=f"quick_{reply}"):
+        st.session_state["query"] = reply
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Emoji Picker Example (simple) ---
+emoji_list = ["🌱", "🌾", "🐞", "💧", "🌻", "🧑‍🌾"]
+emoji = st.selectbox("Add emoji to your message:", [""] + emoji_list, key="emoji_picker")
+if emoji and "query" in st.session_state:
+    st.session_state["query"] += " " + emoji
 
 # --- Perplexity-style search bar: text + paperclip + submit ---
 with st.form("query_form", clear_on_submit=False):
@@ -247,33 +354,63 @@ def get_self_qa(question):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- Chat History (Classic Bubbles with Avatar) ---
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    if message["role"] == "user":
+        st.markdown(
+            f"""
+            <div class="chat-bubble user">
+                <div class="chat-avatar"><img src="https://img.icons8.com/ios-filled/50/388e3c/user-male-circle.png" width="38" style="border-radius:50%;" /></div>
+                <div class="bubble-content user">{message['content']}</div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"""
+            <div class="chat-bubble bot">
+                <div class="chat-avatar">{futuristic_logo_svg}</div>
+                <div class="bubble-content">{message['content']}</div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+# --- Typing Indicator Animation ---
+def show_typing():
+    st.markdown(
+        """
+        <div class="chat-bubble bot">
+            <div class="chat-avatar">{}</div>
+            <div class="bubble-content">
+                <span class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </span>
+            </div>
+        </div>
+        """.format(futuristic_logo_svg), unsafe_allow_html=True
+    )
 
 if submit:
     if user_query.strip() == "" and not uploaded_file:
         st.warning("Please enter a question or upload an image.")
     else:
         st.session_state.messages.append({"role": "user", "content": user_query})
-        with st.chat_message("user"):
-            st.markdown(user_query)
-            if uploaded_file is not None:
-                st.image(image, caption="Your uploaded image", use_column_width=True)
+        st.experimental_rerun()  # To immediately show user message
 
-        with st.chat_message("assistant"):
-            if is_meta_query(user_query):
-                response = handle_meta_query()
-                st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-            else:
-                with st.spinner("Consulting AI experts..."):
-                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
-                    st.markdown(rag_answer)
-                    self_qa = get_self_qa(user_query)
-                    st.markdown("---\n**Other questions you may have:**")
-                    st.markdown(self_qa)
-                    st.session_state.messages.append({"role": "assistant", "content": rag_answer + "\n\n" + self_qa})
+        # Show typing indicator for realism
+        show_typing()
+        time.sleep(1.2)
+
+        if is_meta_query(user_query):
+            response = handle_meta_query()
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        else:
+            with st.spinner("Consulting AI experts..."):
+                rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
+                self_qa = get_self_qa(user_query)
+                full_answer = rag_answer + "<br><hr><b>Other questions you may have:</b><br>" + self_qa
+                st.session_state.messages.append({"role": "assistant", "content": full_answer})
+        st.experimental_rerun()
 
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
