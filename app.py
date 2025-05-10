@@ -1,49 +1,34 @@
-import os
 import streamlit as st
-from dotenv import load_dotenv
 from PIL import Image
-import base64
-import numpy as np
+from streamlit_chat_widget import message, chat_input
+from gtts import gTTS
+import io
 
-from streamlit_mic_recorder import speech_to_text
-from langchain_groq import ChatGroq
-from langchain_tavily import TavilySearch
-from langchain_core.messages import SystemMessage, HumanMessage
+# Dummy AI function (replace with your RAG/LLM/image logic)
+def get_ai_response(user_input, image=None):
+    if image:
+        return "I see you sent an image. (In production, image analysis would go here.)"
+    if user_input:
+        return f"Here’s my advice for your question: {user_input}"
+    return "Please ask a question or upload an image."
 
-# --- Load environment variables ---
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+def text_to_speech(text):
+    tts = gTTS(text)
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return fp.read()
 
-llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
-tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
-
-# --- UI CSS ---
+# Branding and intro
 st.markdown("""
     <style>
-        body, .stApp {background: #f9fafb !important; font-family: 'Montserrat', 'Segoe UI', sans-serif;}
         .ai-logo {display: flex; justify-content: center; align-items: center; margin-top: 2rem; margin-bottom: 0.5rem;}
         .ai-title {text-align: center; font-size: 2.5rem; font-weight: 700; color: #222; margin-bottom: 0.3rem; letter-spacing: -1px;}
         .ai-subtitle {text-align: center; color: #4caf50; font-size: 1.1rem; margin-bottom: 2.5rem;}
         .ai-intro {text-align: center; font-size: 1rem; color: #555; margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto;}
-        .searchbar-container {display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem;}
-        .searchbar-main {display: flex; align-items: center; background: #fff; border-radius: 2rem; border: 2px solid #e0e0e0; box-shadow: 0 2px 12px #a5d6a733; padding: 0.2rem 1.4rem 0.2rem 1.4rem; width: 100%; max-width: 600px;}
-        .searchbar-main input[type="text"] {flex: 1; border: none; background: transparent; font-size: 1.25rem; color: #222; padding: 18px 10px 18px 0; outline: none;}
-        .searchbar-main input[type="text"]::placeholder {color: #bdbdbd; font-size: 1.15rem;}
-        .searchbar-main .file-upload-label {margin-left: 0.5rem; cursor: pointer; font-size: 1.7rem; color: #4caf50; transition: color 0.2s;}
-        .searchbar-main .file-upload-label:hover {color: #388e3c;}
-        .searchbar-main .submit-btn {background: #4caf50; border: none; border-radius: 50%; width: 2.6rem; height: 2.6rem; margin-left: 0.5rem; color: #fff; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;}
-        .searchbar-main .submit-btn:hover {background: #388e3c;}
-        .chat-avatar {width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 2px solid #4caf50; display: inline-block; margin-right: 0.7rem; vertical-align: middle;}
-        .chat-bubble {display: flex; align-items: flex-start; margin-bottom: 1.1rem;}
-        .chat-bubble.bot {flex-direction: row;}
-        .chat-bubble.user {flex-direction: row-reverse;}
-        .bubble-content {background: #f9fbe7; border-radius: 18px; padding: 16px 20px; box-shadow: 0 2px 8px #a5d6a733; color: #2e7d32; font-size: 1.07rem; max-width: 65vw; min-width: 120px;}
-        .bubble-content.user {background: #c8e6c9; color: #1b5e20;}
     </style>
 """, unsafe_allow_html=True)
 
-# --- Logo ---
 ai_logo_svg = """
 <div class="ai-logo">
 <svg width="60" height="60" viewBox="0 0 72 72" fill="none">
@@ -75,182 +60,55 @@ ai_logo_svg = """
 """
 st.markdown(ai_logo_svg, unsafe_allow_html=True)
 
-# --- Title and subtitle ---
 st.markdown('<div class="ai-title">Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
 st.markdown('<div class="ai-subtitle">Empowering Indian farmers with AI, real-time insights, and smart agriculture innovations</div>', unsafe_allow_html=True)
-
-# --- Introduction prompt from your previous code ---
 st.markdown(
     """
     <div class="ai-intro">
-    🤖 I am Terrคi, developed by Prudhvi, an engineer passionate about Indian agriculture.  
-    My mission is to empower Indian farmers with practical, region-specific guidance for every stage of cultivation,  
-    combining AI with real-time knowledge and innovation.
+    🤖 I am Terrคi, developed by Prudhvi, an engineer passionate about Indian agriculture.<br>
+    My mission is to empower Indian farmers with practical, region-specific guidance for every stage of cultivation, combining AI with real-time knowledge and innovation.
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# --- Session state for chat ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "pending_user_message" not in st.session_state:
-    st.session_state.pending_user_message = None
 
-# --- Voice input (browser-based) ---
-voice_text = speech_to_text(language='en', use_container_width=True, just_once=True, key='voice_input')
-if voice_text:
-    st.session_state.pending_user_message = {"query": voice_text, "image_bytes": None, "image_filename": None}
-
-# --- Chat history display ---
-for message in st.session_state.messages:
-    if message["role"] == "user":
-        st.markdown(
-            f"""
-            <div class="chat-bubble user">
-                <div class="chat-avatar"><img src="https://img.icons8.com/ios-filled/50/388e3c/user-male-circle.png" width="38" style="border-radius:50%;" /></div>
-                <div class="bubble-content user">{message['content']}</div>
-            </div>
-            """, unsafe_allow_html=True
-        )
+# Chat history with images and audio
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        message(msg["content"], is_user=True, avatar_style="person")
+        if msg.get("image"):
+            st.image(msg["image"], caption="You sent this image", width=200)
     else:
-        st.markdown(
-            f"""
-            <div class="chat-bubble bot">
-                <div class="chat-avatar">{ai_logo_svg}</div>
-                <div class="bubble-content">{message['content']}</div>
-            </div>
-            """, unsafe_allow_html=True
-        )
+        message(msg["content"], avatar_style="bottts")
+        if msg.get("audio"):
+            st.audio(msg["audio"], format="audio/mp3")
 
-# --- Search bar: text + paperclip + submit ---
-with st.form("query_form", clear_on_submit=False):
-    st.markdown('<div class="searchbar-container">', unsafe_allow_html=True)
-    st.markdown('<div class="searchbar-main">', unsafe_allow_html=True)
-    user_query = st.text_input(
-        "", key="query", label_visibility="collapsed", placeholder="Type your question here..."
-    )
-    uploaded_file = st.file_uploader(
-        "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False, key="file"
-    )
-    st.markdown(
-        '<label for="file-upload" class="file-upload-label" title="Attach image">📎</label>',
-        unsafe_allow_html=True
-    )
-    submit = st.form_submit_button("➔", type="primary", use_container_width=False)
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+# Input: text/voice (via chat_input), image (via uploader)
+with st.container():
+    user_input = chat_input("Type or record your question...")
+    uploaded_image = st.file_uploader("Upload an image (optional)", type=["jpg", "jpeg", "png"], key="img")
 
-# --- On submit: add pending user message to state ---
-if submit:
-    image_bytes = None
-    image_filename = None
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        uploaded_file.seek(0)
-        image_bytes = uploaded_file.read()
-        image_filename = uploaded_file.name
-    st.session_state.pending_user_message = {
-        "query": user_query,
-        "image_bytes": image_bytes,
-        "image_filename": image_filename
-    }
+    if user_input or uploaded_image:
+        user_msg = {"role": "user", "content": user_input or "Image sent."}
+        if uploaded_image:
+            image_bytes = uploaded_image.read()
+            user_msg["image"] = image_bytes
+        st.session_state.messages.append(user_msg)
 
-# --- Assistant response logic ---
-def is_meta_query(q):
-    meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
-    return any(kw in q.lower() for kw in meta_keywords)
+        # AI response
+        ai_response = get_ai_response(user_input, image=uploaded_image)
+        audio_bytes = text_to_speech(ai_response)
+        st.session_state.messages.append({"role": "assistant", "content": ai_response, "audio": audio_bytes})
 
-def handle_meta_query():
-    return (
-        "👩‍🌾 I am Terrคi, developed by Prudhvi, an engineer passionate about Indian agriculture. "
-        "My mission is to empower Indian farmers with practical, region-specific guidance for every stage of cultivation, "
-        "combining AI with real-time knowledge and innovation."
-    )
+        st.experimental_rerun()
 
-def get_rag_answer(question, image_bytes=None, image_filename=None):
-    search_results = tavily_search.invoke({"query": question})
-    image_base64 = base64.b64encode(image_bytes).decode("utf-8") if image_bytes else None
-    if image_bytes:
-        image_instruction = (
-            "The user has attached a photo. Carefully analyze it for plant health, disease, pest, soil, or fertilizer issues. "
-            "If a plant, say if it looks healthy or unhealthy, and suggest best fertilizers and modern techniques to improve growth. "
-            "If unhealthy, explain the problems you see and suggest specific treatments. "
-            "If fertilizer, soil, or other, explain what it is, its uses, and best practices. "
-            "If you cannot identify the image, say so politely and suggest how to get more help."
-        )
-    else:
-        image_instruction = (
-            "No image is attached. Only answer based on the user's question and the search results."
-        )
-    system_prompt = (
-        "You are Terrคi, a friendly and expert agricultural advisor for Indian farmers. "
-        "You are given a farmer's question and a set of search results from trusted Indian sources.\n\n"
-        f"{image_instruction}\n"
-        "Your answer must follow this structure:\n"
-        "1. **Image/Voice Analysis:** (if provided) What is in the image or query and your assessment.\n"
-        "2. **Summary:** A direct, friendly answer to the farmer's question.\n"
-        "3. **Step-by-step Solution:** Detailed, region-specific, actionable advice for the farmer.\n"
-        "4. **Confidence Level:** High/Medium/Low, based on search result quality and input clarity.\n"
-        "5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.).\n\n"
-        f"Here are the search results:\n{search_results}\n\n"
-        f"Farmer's Question:\n{question}\n\n"
-        "Do NOT mention specific sources or web links in your answer. Use simple, respectful, and clear language."
-    )
-    messages = [SystemMessage(content=system_prompt)]
-    if image_base64:
-        messages.append(HumanMessage(
-            content="Attached is a photo uploaded by the farmer (base64-encoded). Please analyze it as per the instructions.",
-            additional_kwargs={"image_base64": image_base64, "filename": image_filename}
-        ))
-    else:
-        messages.append(HumanMessage(content=question))
-    response = llm.invoke(messages)
-    answer = response.content.strip()
-    return answer
-
-def get_self_qa(question):
-    prompt = (
-        "Given this farmer's question, generate 2-3 related follow-up questions a farmer might ask. "
-        "For each, give a detailed, region-specific answer. "
-        "If possible, include local crop varieties, climate, and sustainable practices. "
-        "Format:\nQ1: ...\nA1: ...\nQ2: ...\nA2: ...\n"
-        f"Farmer's question: {question}"
-    )
-    messages = [
-        SystemMessage(content="You are a helpful Indian farming assistant."),
-        HumanMessage(content=prompt)
-    ]
-    response = llm.invoke(messages)
-    return response.content.strip()
-
-# --- Process pending user message and generate assistant reply ---
-if st.session_state.pending_user_message:
-    pending = st.session_state.pending_user_message
-    q = pending["query"]
-    image_bytes = pending["image_bytes"]
-    image_filename = pending["image_filename"]
-
-    # Show user message in chat
-    st.session_state.messages.append({"role": "user", "content": q})
-
-    # Generate assistant response
-    if is_meta_query(q):
-        response = handle_meta_query()
-        st.session_state.messages.append({"role": "assistant", "content": response})
-    else:
-        with st.spinner("Thinking..."):
-            rag_answer = get_rag_answer(q, image_bytes=image_bytes, image_filename=image_filename)
-            self_qa = get_self_qa(q)
-            full_answer = rag_answer + "<br><hr><b>Other questions you may have:</b><br>" + self_qa
-            st.session_state.messages.append({"role": "assistant", "content": full_answer})
-    st.session_state.pending_user_message = None
-    st.experimental_rerun()
-
-# --- Footer ---
+# Footer
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
+    "Terrคi • Developed for Indian farmers • Powered by Prudhvi • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
