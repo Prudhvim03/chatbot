@@ -185,7 +185,7 @@ if prompt:
 # --- Footer ---
 st.markdown(
     "<div style='text-align:center; color:#607d8b; margin-top:2rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
+    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
