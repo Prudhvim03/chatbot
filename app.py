@@ -16,102 +16,117 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Theme and Template ---
+# --- CSS and HTML for search bar with paperclip icon ---
 st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-        .stApp {background-color: #ffffff; color: #333333; font-family: 'Montserrat', sans-serif;}
-        .futuristic-logo {display: flex; justify-content: center; align-items: center; margin-bottom: -6px;}
-        .main-title {text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem;}
-        .subtitle {text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500;}
-        .perplexity-row {display: flex; align-items: center; gap: 0.5rem; max-width: 700px; margin: 0 auto 1.5rem auto;}
-        .perplexity-row .stTextInput>div>div>input {
-            font-size: 1.1rem; background: #f1f8e9; border: 2px solid #81c784;
-            border-radius: 12px; color: #2e7d32; padding: 12px 16px;
-        }
-        .perplexity-row .stTextInput>div>div>input:focus {
-            border-color: #4caf50; box-shadow: 0 0 8px #a5d6a7;
-        }
-        .perplexity-row .stFileUploader {margin-bottom: 0;}
-        .perplexity-row .stFileUploader label span {
-            font-size: 1.5rem !important;
-            color: #4caf50 !important;
-            cursor: pointer;
-            margin-left: -1.5rem;
-        }
-        .perplexity-row .stFileUploader label span:hover {color: #388e3c !important;}
-        .stButton>button {background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none;}
-        .stButton>button:hover {background-color: #388e3c;}
-        .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
-        .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
-        .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
-        hr {border: none; border-top: 1px solid #a5d6a7; margin: 24px 0;}
-        ::-webkit-scrollbar {width: 8px;}
-        ::-webkit-scrollbar-thumb {background-color: #81c784; border-radius: 4px;}
-    </style>
+<style>
+  .search-container {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: auto;
+  }
+  input#search-input {
+    width: 100%;
+    padding: 12px 48px 12px 16px; /* space for icon on right */
+    font-size: 1.1rem;
+    border: 2px solid #81c784;
+    border-radius: 12px;
+    outline: none;
+    color: #2e7d32;
+    background-color: #f1f8e9;
+  }
+  input#search-input:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 8px #a5d6a7;
+  }
+  #file-upload {
+    display: none;
+  }
+  label[for="file-upload"] {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.4rem;
+    color: #4caf50;
+    user-select: none;
+  }
+  label[for="file-upload"]:hover {
+    color: #388e3c;
+  }
+</style>
+
+<div class="search-container">
+  <input type="text" id="search-input" placeholder="Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…" />
+  <label for="file-upload" title="Attach an image">📎</label>
+  <input type="file" id="file-upload" accept="image/png, image/jpeg" />
+</div>
+
+<script>
+  const input = document.getElementById('search-input');
+  const fileInput = document.getElementById('file-upload');
+
+  // When user selects a file, send event to Streamlit
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result.split(',')[1];
+        // Send file name and base64 to Streamlit via window.parent.postMessage
+        window.parent.postMessage({func: 'fileUpload', name: file.name, data: base64}, '*');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Send input value to Streamlit on Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      window.parent.postMessage({func: 'queryInput', query: input.value}, '*');
+    }
+  });
+</script>
 """, unsafe_allow_html=True)
 
-# --- Logo ---
-futuristic_logo_svg = """
-<svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-  <defs>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#4caf50" stop-opacity="0.7"/>
-      <stop offset="100%" stop-color="#81c784" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="stem" x1="36" y1="18" x2="36" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#4caf50"/>
-      <stop offset="1" stop-color="#388e3c"/>
-    </linearGradient>
-  </defs>
-  <ellipse cx="36" cy="54" rx="22" ry="10" fill="url(#glow)"/>
-  <path d="M36 54 Q46 34 62 22 Q46 28 36 54" fill="#aed581" opacity="0.92"/>
-  <path d="M36 54 Q26 34 10 22 Q26 28 36 54" fill="#aed581" opacity="0.92"/>
-  <rect x="34" y="18" width="4" height="36" rx="2" fill="url(#stem)"/>
-  <ellipse cx="36" cy="18" rx="7" ry="9" fill="#aed581" stroke="#4caf50" stroke-width="1.5"/>
-  <path d="M36 54 L36 68" stroke="#388e3c" stroke-width="2"/>
-  <circle cx="36" cy="68" r="2.5" fill="#388e3c"/>
-  <path d="M41 44 L53 51" stroke="#388e3c" stroke-width="2"/>
-  <circle cx="53" cy="51" r="2.2" fill="#388e3c"/>
-  <path d="M31 44 L19 51" stroke="#388e3c" stroke-width="2"/>
-  <circle cx="19" cy="51" r="2.2" fill="#388e3c"/>
-  <circle cx="36" cy="14" r="3" fill="#4caf50" stroke="#81c784" stroke-width="1"/>
-  <text x="36" y="15.5" font-size="2.5" text-anchor="middle" fill="#1b5e20" font-family="Segoe UI">AI</text>
-</svg>
-"""
-st.markdown(f'<div class="futuristic-logo">{futuristic_logo_svg}</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">🌾 Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Empowering Indian farmers with AI, real-time insights, and smart agriculture innovations</div>', unsafe_allow_html=True)
+# --- Streamlit side: receive JS messages via st.experimental_get_query_params hack ---
 
-# --- Perplexity-style search bar: text + paperclip in one row ---
-with st.container():
-    st.markdown('<div class="perplexity-row">', unsafe_allow_html=True)
-    col1, col2 = st.columns([8, 1])
-    with col1:
-        user_query = st.text_input(
-            "Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…",
-            key="query", label_visibility="collapsed", placeholder="Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…"
-        )
-    with col2:
-        uploaded_file = st.file_uploader(
-            "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False
-        )
-        st.markdown(
-            '<label for="perplexity-clip" style="position:absolute;top:12px;right:20px;cursor:pointer;font-size:1.5rem;color:#4caf50;">📎</label>',
-            unsafe_allow_html=True
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
+# We'll use Streamlit's experimental features to capture JS messages.
+# Since Streamlit doesn't support direct JS->Python messaging, we simulate with st.session_state
 
-image_bytes = None
-image_filename = None
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded image", use_column_width=True)
-    uploaded_file.seek(0)
-    image_bytes = uploaded_file.read()
-    image_filename = uploaded_file.name
+if "uploaded_file_data" not in st.session_state:
+    st.session_state.uploaded_file_data = None
+if "uploaded_file_name" not in st.session_state:
+    st.session_state.uploaded_file_name = None
+if "user_query" not in st.session_state:
+    st.session_state.user_query = ""
 
-# --- Chatbot logic ---
+# Helper to decode base64 to bytes
+def base64_to_bytes(b64string):
+    import base64
+    return base64.b64decode(b64string)
+
+# We cannot directly receive JS messages, so as a workaround,
+# provide a manual file uploader fallback below (or use streamlit components in advanced setups).
+
+# Manual fallback for file upload and query input:
+st.markdown("### Or use the inputs below if the above bar doesn't work:")
+
+user_query = st.text_input("Your question:", value=st.session_state.user_query)
+uploaded_file = st.file_uploader("Attach an image (plant, fertilizer, soil, etc.)", type=["png", "jpg", "jpeg"])
+
+if uploaded_file:
+    st.session_state.uploaded_file_data = uploaded_file.read()
+    st.session_state.uploaded_file_name = uploaded_file.name
+else:
+    st.session_state.uploaded_file_data = None
+    st.session_state.uploaded_file_name = None
+
+if user_query:
+    st.session_state.user_query = user_query
+
+# --- Your existing chatbot logic below ---
 def is_meta_query(q):
     meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
     return any(kw in q.lower() for kw in meta_keywords)
@@ -131,20 +146,22 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     system_prompt = (
         "You are an expert Indian agricultural advisor AI. "
         "You are given a user's question and a set of search results from trusted Indian sources."
-        "\n\nYour job is to:"
-        "\n1. Read the search results and extract the most relevant facts."
-        "\n2. Prefer facts and advice from the search results."
-        "\n3. If the search results are incomplete, use your own expertise but clearly say so."
-        "\n4. Structure your answer as follows:"
-        "\n   - **Summary:** A quick answer to the user's question."
-        "\n   - **Step-by-step Solution:** Detailed, region-specific, actionable advice."
-        "\n   - **Confidence Level:** High/Medium/Low, based on search result quality."
-        "\n   - **Suggested Next Steps:** If the answer is incomplete, suggest where the user can get more info (e.g., local agri office, helpline, etc.)."
+        "\n\nIf the user has uploaded an image, analyze it carefully:"
+        "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
+        "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
+        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results."
+        "\n- If you cannot identify the image, say so politely and suggest how to get more help."
+        "\n\nYour answer must follow this structure:"
+        "\n1. **Image Analysis:** (if image provided) What is in the image and your assessment."
+        "\n2. **Summary:** A direct, concise answer to the user's question."
+        "\n3. **Step-by-step Solution:** Detailed, region-specific, actionable advice."
+        "\n4. **Confidence Level:** High/Medium/Low, based on search result quality and image clarity."
+        "\n5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.)."
         "\n\nHere are the search results:\n"
         f"{tavily_result}"
         "\n\nUser Question:\n"
         f"{question}"
-        "\n\nNow answer as per the structure above. Do NOT mention specific sources or web links in your answer. Use clear, simple language."
+        "\n\nDo NOT mention specific sources or web links in your answer. Use clear, simple language."
     )
     messages = [SystemMessage(content=system_prompt)]
     if image_base64:
@@ -173,7 +190,7 @@ def get_self_qa(question):
     response = llm.invoke(messages)
     return response.content.strip()
 
-# --- Chat Session State ---
+# --- Chat session state ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -181,15 +198,20 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if st.button("Submit", use_container_width=True):
-    if user_query.strip() == "" and not uploaded_file:
+# --- Submit button ---
+if st.button("Submit Query"):
+    if not st.session_state.user_query and not st.session_state.uploaded_file_data:
         st.warning("Please enter a question or upload an image.")
     else:
+        user_query = st.session_state.user_query
+        image_bytes = st.session_state.uploaded_file_data
+        image_filename = st.session_state.uploaded_file_name
+
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"):
             st.markdown(user_query)
-            if uploaded_file is not None:
-                st.image(image, caption="Your uploaded image", use_column_width=True)
+            if image_bytes:
+                st.image(image_bytes, caption="Your uploaded image", use_column_width=True)
 
         with st.chat_message("assistant"):
             if is_meta_query(user_query):
@@ -205,9 +227,10 @@ if st.button("Submit", use_container_width=True):
                     st.markdown(self_qa)
                     st.session_state.messages.append({"role": "assistant", "content": rag_answer + "\n\n" + self_qa})
 
+# --- Footer ---
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
+    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
