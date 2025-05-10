@@ -16,7 +16,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Custom CSS for unique layout and Perplexity-style bar ---
+# --- Custom CSS for Perplexity-style search bar and chat layout ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
