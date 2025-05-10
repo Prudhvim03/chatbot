@@ -16,7 +16,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Custom CSS for Perplexity-style search bar and chat layout ---
+# --- Theme and Template ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
@@ -45,6 +45,9 @@ st.markdown("""
         .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
         .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
         .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
+        hr {border: none; border-top: 1px solid #a5d6a7; margin: 24px 0;}
+        ::-webkit-scrollbar {width: 8px;}
+        ::-webkit-scrollbar-thumb {background-color: #81c784; border-radius: 4px;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -128,22 +131,20 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     system_prompt = (
         "You are an expert Indian agricultural advisor AI. "
         "You are given a user's question and a set of search results from trusted Indian sources."
-        "\n\nIf the user has uploaded an image, analyze it carefully:"
-        "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
-        "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
-        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results."
-        "\n- If you cannot identify the image, say so politely and suggest how to get more help."
-        "\n\nYour answer must follow this structure:"
-        "\n1. **Image Analysis:** (if image provided) What is in the image and your assessment."
-        "\n2. **Summary:** A direct, concise answer to the user's question."
-        "\n3. **Step-by-step Solution:** Detailed, region-specific, actionable advice."
-        "\n4. **Confidence Level:** High/Medium/Low, based on search result quality and image clarity."
-        "\n5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.)."
+        "\n\nYour job is to:"
+        "\n1. Read the search results and extract the most relevant facts."
+        "\n2. Prefer facts and advice from the search results."
+        "\n3. If the search results are incomplete, use your own expertise but clearly say so."
+        "\n4. Structure your answer as follows:"
+        "\n   - **Summary:** A quick answer to the user's question."
+        "\n   - **Step-by-step Solution:** Detailed, region-specific, actionable advice."
+        "\n   - **Confidence Level:** High/Medium/Low, based on search result quality."
+        "\n   - **Suggested Next Steps:** If the answer is incomplete, suggest where the user can get more info (e.g., local agri office, helpline, etc.)."
         "\n\nHere are the search results:\n"
         f"{tavily_result}"
         "\n\nUser Question:\n"
         f"{question}"
-        "\n\nDo NOT mention specific sources or web links in your answer. Use clear, simple language."
+        "\n\nNow answer as per the structure above. Do NOT mention specific sources or web links in your answer. Use clear, simple language."
     )
     messages = [SystemMessage(content=system_prompt)]
     if image_base64:
@@ -206,7 +207,7 @@ if st.button("Submit", use_container_width=True):
 
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
+    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
