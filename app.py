@@ -14,7 +14,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Logo and Theme ---
+# --- Logo and Glassmorphism Theme ---
 futuristic_logo_svg = """
 <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
   <defs>
@@ -44,27 +44,113 @@ futuristic_logo_svg = """
 """
 
 st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-        .stApp { background-color: #ffffff; color: #333333; font-family: 'Montserrat', sans-serif; }
-        .futuristic-logo { display: flex; justify-content: center; align-items: center; margin-bottom: -6px; }
-        .main-title { text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem; }
-        .subtitle { text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500; }
-        .stChatInput input { font-size: 1.1rem !important; background: #f1f8e9; border: 2px solid #81c784; border-radius: 12px; color: #2e7d32; padding-left: 14px; height: 40px; transition: border-color 0.3s ease; }
-        .stChatInput input:focus { border-color: #4caf50 !important; outline: none; box-shadow: 0 0 8px #a5d6a7; }
-        .stButton>button { background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none; box-shadow: 0 4px 12px #81c784aa; transition: background-color 0.3s ease; }
-        .stButton>button:hover { background-color: #388e3c; box-shadow: 0 6px 16px #66bb6aaa; cursor: pointer; }
-        .stMarkdown { background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 3px 15px #c5e1a5aa; color: #2e7d32 !important; font-size: 1.05rem; line-height: 1.6; }
-        .stChatMessage > div { background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important; font-size: 1rem !important; line-height: 1.5 !important; box-shadow: 0 1px 6px #a5d6a7aa; }
-        .stChatMessage.stChatMessage-user > div { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
-        hr { border: none; border-top: 1px solid #a5d6a7; margin: 24px 0; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background-color: #81c784; border-radius: 4px; }
-    </style>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+.stApp {
+    background: linear-gradient(135deg, #e8f5e9 0%, #f9fbe7 100%);
+    min-height: 100vh;
+    font-family: 'Montserrat', sans-serif;
+}
+.futuristic-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: -10px;
+}
+.main-title {
+    text-align: center;
+    color: #4caf50;
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    margin-bottom: 0.2rem;
+    text-shadow: 0 0 8px #aed581;
+}
+.subtitle {
+    text-align: center;
+    color: #388e3c;
+    font-size: 1.15rem;
+    margin-bottom: 2rem;
+    font-weight: 500;
+    text-shadow: 0 0 6px #c8e6c9;
+}
+.glass-card {
+    background: rgba(255,255,255,0.45);
+    border-radius: 20px;
+    box-shadow: 0 6px 32px #c8e6c988;
+    padding: 32px 24px;
+    margin: 0 auto 32px auto;
+    max-width: 620px;
+    border: 1.5px solid #c8e6c9;
+    backdrop-filter: blur(8px);
+}
+.stChatInput input {
+    font-size: 1.1rem !important;
+    background: #f1f8e9;
+    border: 2px solid #81c784;
+    border-radius: 14px;
+    color: #2e7d32;
+    padding-left: 14px;
+    height: 44px;
+    box-shadow: 0 0 12px #c8e6c955;
+}
+.stChatInput input:focus {
+    border-color: #4caf50 !important;
+    outline: none;
+    box-shadow: 0 0 12px #a5d6a7;
+}
+.stButton>button {
+    background-color: #4caf50;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 10px 24px;
+    border: none;
+    box-shadow: 0 4px 12px #81c784aa;
+    transition: background-color 0.3s ease;
+}
+.stButton>button:hover {
+    background-color: #388e3c;
+    box-shadow: 0 6px 16px #66bb6aaa;
+    cursor: pointer;
+}
+.stMarkdown {
+    background: rgba(255,255,255,0.60);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 15px #c5e1a5aa;
+    color: #2e7d32 !important;
+    font-size: 1.08rem;
+    line-height: 1.7;
+    border: 1.5px solid #c8e6c9;
+}
+.stChatMessage > div {
+    background: rgba(255,255,255,0.75) !important;
+    border-radius: 18px !important;
+    color: #1b5e20 !important;
+    padding: 16px !important;
+    font-size: 1.07rem !important;
+    line-height: 1.6 !important;
+    box-shadow: 0 1px 8px #a5d6a7aa;
+    margin-bottom: 10px;
+    border: 1.5px solid #c8e6c9;
+}
+.stChatMessage.stChatMessage-user > div {
+    background: #c8e6c9 !important;
+    color: #2e7d32 !important;
+    font-weight: 600;
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(120deg, #81c784 0%, #aed581 100%);
+    border-radius: 4px;
+}
+</style>
 """, unsafe_allow_html=True)
 
 st.markdown(f'<div class="futuristic-logo">{futuristic_logo_svg}</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">🌾 Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title"> Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Empowering Indian farmers with AI, real-time insights, and smart agriculture innovations</div>', unsafe_allow_html=True)
 
 # --- Meta-question detection ---
@@ -74,22 +160,16 @@ def is_meta_query(q):
 
 def handle_meta_query():
     return (
-        "🤖 I am Terrคi, developed by Prudhvi, an engineer passionate about Indian agriculture. "
-        "My mission is to empower Indian farmers with practical, region-specific guidance for every stage of cultivation, "
+        "I am Terrคi, developed by Prudhvi, an engineer passionate about Indian agriculture. "
+        "My mission is to empower Indian farmers, students, and agriculturalists with practical, region-specific guidance for every stage of cultivation, "
         "combining AI with real-time knowledge and innovation."
     )
 
 # --- Only show self Q&A if user asks for it ---
 def is_selfqa_query(q):
     triggers = [
-        "other questions",
-        "more questions",
-        "what else",
-        "related questions",
-        "suggest more",
-        "show more",
-        "what else can i ask",
-        "give me more questions"
+        "other questions", "more questions", "what else", "related questions", "suggest more", "show more",
+        "what else can i ask", "give me more questions"
     ]
     q_lower = q.strip().lower()
     return any(trigger in q_lower for trigger in triggers)
@@ -160,9 +240,13 @@ def get_self_qa(question):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 prompt = st.chat_input("Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…")
 
@@ -177,7 +261,6 @@ if prompt:
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
         elif is_selfqa_query(prompt):
-            # Only show self Q&A if user asks for it
             if len(st.session_state.messages) > 1:
                 prev_user_msg = next((m["content"] for m in reversed(st.session_state.messages[:-1]) if m["role"] == "user"), None)
                 if prev_user_msg:
@@ -205,7 +288,7 @@ if prompt:
 # --- Footer ---
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
-    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
+    "Developed for Indian farmers • Powered by Prudhvi • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
