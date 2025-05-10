@@ -8,7 +8,7 @@ from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
 
-# Load environment variables
+# --- Load environment variables ---
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
@@ -172,7 +172,6 @@ if uploaded_file is not None:
     image_bytes = uploaded_file.read()
     image_filename = uploaded_file.name
 
-# --- Chatbot logic ---
 def is_meta_query(q):
     meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
     return any(kw in q.lower() for kw in meta_keywords)
@@ -189,25 +188,33 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     image_base64 = None
     if image_bytes:
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+    if image_bytes:
+        image_instruction = (
+            "The user has attached an image. Analyze it carefully:\n"
+            "- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
+            "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health.\n"
+            "- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results.\n"
+            "- If you cannot identify the image, say so politely and suggest how to get more help."
+        )
+    else:
+        image_instruction = (
+            "No image is attached. Only answer based on the user's question and the search results."
+        )
     system_prompt = (
         "You are an expert Indian agricultural advisor AI. "
-        "You are given a user's question and a set of search results from trusted Indian sources."
-        "\n\nIf the user has uploaded an image, analyze it carefully:"
-        "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
-        "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
-        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results."
-        "\n- If you cannot identify the image, say so politely and suggest how to get more help."
-        "\n\nYour answer must follow this structure:"
-        "\n1. **Image Analysis:** (if image provided) What is in the image and your assessment."
-        "\n2. **Summary:** A direct, concise answer to the user's question."
-        "\n3. **Step-by-step Solution:** Detailed, region-specific, actionable advice."
-        "\n4. **Confidence Level:** High/Medium/Low, based on search result quality and image clarity."
-        "\n5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.)."
-        "\n\nHere are the search results:\n"
-        f"{tavily_result}"
-        "\n\nUser Question:\n"
-        f"{question}"
-        "\n\nDo NOT mention specific sources or web links in your answer. Use clear, simple language."
+        "You are given a user's question and a set of search results from trusted Indian sources.\n\n"
+        f"{image_instruction}\n"
+        "Your answer must follow this structure:\n"
+        "1. **Image Analysis:** (if image provided) What is in the image and your assessment.\n"
+        "2. **Summary:** A direct, concise answer to the user's question.\n"
+        "3. **Step-by-step Solution:** Detailed, region-specific, actionable advice.\n"
+        "4. **Confidence Level:** High/Medium/Low, based on search result quality and image clarity.\n"
+        "5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.).\n\n"
+        "Here are the search results:\n"
+        f"{tavily_result}\n\n"
+        "User Question:\n"
+        f"{question}\n\n"
+        "Do NOT mention specific sources or web links in your answer. Use clear, simple language."
     )
     messages = [SystemMessage(content=system_prompt)]
     if image_base64:
