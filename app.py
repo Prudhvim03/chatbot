@@ -1,4 +1,5 @@
 import os
+import re
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -13,7 +14,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Logo and Theme (from your file) ---
+# --- Logo and Theme ---
 futuristic_logo_svg = """
 <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
   <defs>
@@ -45,98 +46,20 @@ futuristic_logo_svg = """
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-        .stApp {
-            background-color: #ffffff;
-            color: #333333;
-            font-family: 'Montserrat', sans-serif;
-        }
-        .futuristic-logo {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: -6px;
-        }
-        .main-title {
-            text-align: center;
-            color: #4caf50;
-            font-size: 2.8rem;
-            font-weight: 700;
-            letter-spacing: 1.2px;
-            margin-bottom: 0.3rem;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666666;
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-            font-weight: 500;
-        }
-        .stChatInput input {
-            font-size: 1.1rem !important;
-            background: #f1f8e9;
-            border: 2px solid #81c784;
-            border-radius: 12px;
-            color: #2e7d32;
-            padding-left: 14px;
-            height: 40px;
-            transition: border-color 0.3s ease;
-        }
-        .stChatInput input:focus {
-            border-color: #4caf50 !important;
-            outline: none;
-            box-shadow: 0 0 8px #a5d6a7;
-        }
-        .stButton>button {
-            background-color: #4caf50;
-            color: #ffffff;
-            font-weight: 700;
-            border-radius: 12px;
-            padding: 10px 24px;
-            border: none;
-            box-shadow: 0 4px 12px #81c784aa;
-            transition: background-color 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #388e3c;
-            box-shadow: 0 6px 16px #66bb6aaa;
-            cursor: pointer;
-        }
-        .stMarkdown {
-            background-color: #f9fbe7;
-            border-radius: 14px;
-            padding: 22px;
-            margin-bottom: 20px;
-            box-shadow: 0 3px 15px #c5e1a5aa;
-            color: #2e7d32 !important;
-            font-size: 1.05rem;
-            line-height: 1.6;
-        }
-        .stChatMessage > div {
-            background-color: #e8f5e9 !important;
-            border-radius: 14px !important;
-            color: #1b5e20 !important;
-            padding: 14px !important;
-            font-size: 1rem !important;
-            line-height: 1.5 !important;
-            box-shadow: 0 1px 6px #a5d6a7aa;
-        }
-        .stChatMessage.stChatMessage-user > div {
-            background-color: #c8e6c9 !important;
-            color: #2e7d32 !important;
-            font-weight: 600;
-        }
-        hr {
-            border: none;
-            border-top: 1px solid #a5d6a7;
-            margin: 24px 0;
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: #81c784;
-            border-radius: 4px;
-        }
+        .stApp { background-color: #ffffff; color: #333333; font-family: 'Montserrat', sans-serif; }
+        .futuristic-logo { display: flex; justify-content: center; align-items: center; margin-bottom: -6px; }
+        .main-title { text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem; }
+        .subtitle { text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500; }
+        .stChatInput input { font-size: 1.1rem !important; background: #f1f8e9; border: 2px solid #81c784; border-radius: 12px; color: #2e7d32; padding-left: 14px; height: 40px; transition: border-color 0.3s ease; }
+        .stChatInput input:focus { border-color: #4caf50 !important; outline: none; box-shadow: 0 0 8px #a5d6a7; }
+        .stButton>button { background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none; box-shadow: 0 4px 12px #81c784aa; transition: background-color 0.3s ease; }
+        .stButton>button:hover { background-color: #388e3c; box-shadow: 0 6px 16px #66bb6aaa; cursor: pointer; }
+        .stMarkdown { background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 3px 15px #c5e1a5aa; color: #2e7d32 !important; font-size: 1.05rem; line-height: 1.6; }
+        .stChatMessage > div { background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important; font-size: 1rem !important; line-height: 1.5 !important; box-shadow: 0 1px 6px #a5d6a7aa; }
+        .stChatMessage.stChatMessage-user > div { background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600; }
+        hr { border: none; border-top: 1px solid #a5d6a7; margin: 24px 0; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background-color: #81c784; border-radius: 4px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -156,22 +79,6 @@ def handle_meta_query():
         "combining AI with real-time knowledge and innovation."
     )
 
-# --- Self Q&A with Richer Prompts ---
-def get_self_qa(question):
-    prompt = (
-        "Given this user question about Indian farming, generate 2-3 related follow-up questions a farmer might ask. "
-        "For each, give a detailed, region-specific answer. "
-        "If possible, include local crop varieties, climate, and sustainable practices. "
-        "Format:\nQ1: ...\nA1: ...\nQ2: ...\nA2: ...\n"
-        f"User question: {question}"
-    )
-    messages = [
-        SystemMessage(content="You are a helpful Indian farming assistant."),
-        HumanMessage(content=prompt)
-    ]
-    response = llm.invoke(messages)
-    return response.content.strip()
-
 # --- Only show self Q&A if user asks for it ---
 def is_selfqa_query(q):
     triggers = [
@@ -186,6 +93,20 @@ def is_selfqa_query(q):
     ]
     q_lower = q.strip().lower()
     return any(trigger in q_lower for trigger in triggers)
+
+# --- Restrict to farming/agriculture/Agri-student questions ---
+def is_farming_question(question):
+    keywords = [
+        "farm", "farmer", "agriculture", "crop", "soil", "irrigation", "weather",
+        "pesticide", "fertilizer", "seed", "plant", "harvest", "yield", "agronomy",
+        "horticulture", "animal husbandry", "disease", "pest", "organic", "sowing",
+        "rain", "monsoon", "market price", "mandi", "tractor", "dairy", "farming",
+        "agriculturist", "agriculturalist", "agri", "agronomist", "extension", "agri student",
+        "agri career", "kisan", "polyhouse", "greenhouse", "micro irrigation", "crop insurance",
+        "fpo", "farmer producer", "soil health", "farm loan", "krishi", "agriculture student"
+    ]
+    q = question.lower()
+    return any(re.search(r"\b" + re.escape(word) + r"\b", q) for word in keywords)
 
 # --- Main answer (friendly, South Indian style, no search result list) ---
 def get_rag_answer(question):
@@ -219,6 +140,22 @@ def get_rag_answer(question):
     answer = response.content.strip()
     return answer
 
+# --- Self Q&A with Richer Prompts ---
+def get_self_qa(question):
+    prompt = (
+        "Given this user question about Indian farming, generate 2-3 related follow-up questions a farmer might ask. "
+        "For each, give a detailed, region-specific answer. "
+        "If possible, include local crop varieties, climate, and sustainable practices. "
+        "Format:\nQ1: ...\nA1: ...\nQ2: ...\nA2: ...\n"
+        f"User question: {question}"
+    )
+    messages = [
+        SystemMessage(content="You are a helpful Indian farming assistant."),
+        HumanMessage(content=prompt)
+    ]
+    response = llm.invoke(messages)
+    return response.content.strip()
+
 # --- Chat Session State ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -242,7 +179,6 @@ if prompt:
         elif is_selfqa_query(prompt):
             # Only show self Q&A if user asks for it
             if len(st.session_state.messages) > 1:
-                # Use the previous user question for generating self Q&A
                 prev_user_msg = next((m["content"] for m in reversed(st.session_state.messages[:-1]) if m["role"] == "user"), None)
                 if prev_user_msg:
                     st.markdown("**Other questions you may have:**")
@@ -253,6 +189,13 @@ if prompt:
                     st.markdown("Please ask a farming question first, then I can suggest more questions.")
             else:
                 st.markdown("Please ask a farming question first, then I can suggest more questions.")
+        elif not is_farming_question(prompt):
+            response = (
+                "🙏 Sorry, I can only answer questions related to farming, agriculture, or agri-studies. "
+                "If you are a farmer, student, or agriculturalist, please ask about crops, soil, weather, pest management, agri-careers, etc."
+            )
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
         else:
             with st.spinner("Consulting AI experts and searching the latest info..."):
                 rag_answer = get_rag_answer(prompt)
