@@ -8,58 +8,167 @@ from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
 
-# Load environment variables
+# --- ENV ---
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Theme and Layout CSS ---
+# --- CSS for Perplexity-style UI ---
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
-        .stApp {background: #f9fafb; color: #232526; font-family: 'Montserrat', sans-serif;}
-        .centered-header {text-align:center; color:#222; font-size:2.5rem; font-weight:700; margin:2.5rem 0 1.5rem 0;}
-        .subtitle {text-align:center; color:#4caf50; font-size:1.2rem; margin-bottom:2.5rem;}
-        .perplexity-bar {display: flex; align-items: center; background: #fff; border-radius: 18px; border: 2px solid #e0e0e0; box-shadow: 0 2px 12px #a5d6a733; padding: 0.25rem 1.2rem; max-width: 540px; margin: 0 auto 2.5rem auto;}
-        .perplexity-bar .stTextInput>div>div>input {font-size: 1.25rem; background: transparent; border: none; color: #2e7d32; padding: 14px 8px;}
-        .perplexity-bar .stTextInput>div>div>input:focus {outline: none;}
-        .perplexity-bar .stFileUploader {margin-bottom: 0;}
-        .perplexity-bar .stFileUploader label span {font-size: 1.7rem !important; color: #4caf50 !important; cursor: pointer; margin-left: -1.5rem;}
-        .perplexity-bar .stFileUploader label span:hover {color: #388e3c !important;}
-        .stButton>button {background-color: #4caf50; color: #fff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none;}
-        .stButton>button:hover {background-color: #388e3c;}
-        .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
+        body, .stApp {
+            background: #f9fafb !important;
+            font-family: 'Montserrat', 'Segoe UI', sans-serif;
+        }
+        .centered-title {
+            text-align: center;
+            font-size: 2.7rem;
+            font-weight: 700;
+            color: #222;
+            margin-top: 3.5rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4caf50;
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+        }
+        .searchbar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2.2rem;
+        }
+        .searchbar-main {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-radius: 2rem;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 12px #a5d6a733;
+            padding: 0.2rem 1.4rem 0.2rem 1.4rem;
+            width: 100%;
+            max-width: 600px;
+        }
+        .searchbar-main input[type="text"] {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1.25rem;
+            color: #222;
+            padding: 18px 10px 18px 0;
+            outline: none;
+        }
+        .searchbar-main input[type="text"]::placeholder {
+            color: #bdbdbd;
+            font-size: 1.15rem;
+        }
+        .searchbar-main .file-upload-label {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-size: 1.7rem;
+            color: #4caf50;
+            transition: color 0.2s;
+        }
+        .searchbar-main .file-upload-label:hover {
+            color: #388e3c;
+        }
+        .searchbar-main .submit-btn {
+            background: #4caf50;
+            border: none;
+            border-radius: 50%;
+            width: 2.6rem;
+            height: 2.6rem;
+            margin-left: 0.5rem;
+            color: #fff;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .searchbar-main .submit-btn:hover {
+            background: #388e3c;
+        }
+        .mode-dropdown {
+            margin: 0.5rem 0 0.2rem 0;
+        }
+        .uploaded-img-preview {display: flex; justify-content: center; margin-top: 1rem;}
         .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
         .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
-        .uploaded-img-preview {display: flex; justify-content: center; margin-top: 1rem;}
     </style>
 """, unsafe_allow_html=True)
 
-# --- Centered Question Header ---
-st.markdown('<div class="centered-header">What do you want to know?</div>', unsafe_allow_html=True)
+# --- Your Logo (SVG) ---
+futuristic_logo_svg = """
+<div style="display:flex;justify-content:center;margin-bottom:0.5rem;">
+<svg width="60" height="60" viewBox="0 0 72 72" fill="none">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4caf50" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#81c784" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stem" x1="36" y1="18" x2="36" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4caf50"/>
+      <stop offset="1" stop-color="#388e3c"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="36" cy="54" rx="22" ry="10" fill="url(#glow)"/>
+  <path d="M36 54 Q46 34 62 22 Q46 28 36 54" fill="#aed581" opacity="0.92"/>
+  <path d="M36 54 Q26 34 10 22 Q26 28 36 54" fill="#aed581" opacity="0.92"/>
+  <rect x="34" y="18" width="4" height="36" rx="2" fill="url(#stem)"/>
+  <ellipse cx="36" cy="18" rx="7" ry="9" fill="#aed581" stroke="#4caf50" stroke-width="1.5"/>
+  <path d="M36 54 L36 68" stroke="#388e3c" stroke-width="2"/>
+  <circle cx="36" cy="68" r="2.5" fill="#388e3c"/>
+  <path d="M41 44 L53 51" stroke="#388e3c" stroke-width="2"/>
+  <circle cx="53" cy="51" r="2.2" fill="#388e3c"/>
+  <path d="M31 44 L19 51" stroke="#388e3c" stroke-width="2"/>
+  <circle cx="19" cy="51" r="2.2" fill="#388e3c"/>
+  <circle cx="36" cy="14" r="3" fill="#4caf50" stroke="#81c784" stroke-width="1"/>
+  <text x="36" y="15.5" font-size="2.5" text-anchor="middle" fill="#1b5e20" font-family="Segoe UI">AI</text>
+</svg>
+</div>
+"""
+st.markdown(futuristic_logo_svg, unsafe_allow_html=True)
+
+# --- Centered Title and Subtitle ---
+st.markdown('<div class="centered-title">Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image if you wish!</div>', unsafe_allow_html=True)
 
-# --- Perplexity-style search bar: text + paperclip in one row ---
-with st.container():
-    st.markdown('<div class="perplexity-bar">', unsafe_allow_html=True)
-    col1, col2 = st.columns([8, 1])
-    with col1:
-        user_query = st.text_input(
-            "", key="query", label_visibility="collapsed", placeholder="Ask anything..."
-        )
-    with col2:
-        uploaded_file = st.file_uploader(
-            "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False
-        )
-        st.markdown(
-            '<label for="perplexity-clip" style="position:absolute;top:12px;right:20px;cursor:pointer;font-size:1.7rem;color:#4caf50;">📎</label>',
-            unsafe_allow_html=True
-        )
+# --- Search Mode Dropdown (optional, like Perplexity) ---
+mode = st.selectbox(
+    "Search Mode",
+    options=["Web", "Academic", "Social"],
+    index=0,
+    key="search_mode",
+    help="Choose where to search for answers.",
+)
+st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
+
+# --- Perplexity-style search bar: text + paperclip + submit ---
+with st.form("query_form", clear_on_submit=False):
+    st.markdown('<div class="searchbar-container">', unsafe_allow_html=True)
+    st.markdown('<div class="searchbar-main">', unsafe_allow_html=True)
+    user_query = st.text_input(
+        "", key="query", label_visibility="collapsed", placeholder="Ask anything..."
+    )
+    uploaded_file = st.file_uploader(
+        "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False, key="file"
+    )
+    st.markdown(
+        '<label for="file-upload" class="file-upload-label" title="Attach image">📎</label>',
+        unsafe_allow_html=True
+    )
+    submit = st.form_submit_button("➔", type="primary", use_container_width=False)
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+# --- Image preview ---
 image_bytes = None
 image_filename = None
 if uploaded_file is not None:
@@ -81,14 +190,14 @@ def handle_meta_query():
         "combining AI with real-time knowledge and innovation."
     )
 
-def get_rag_answer(question, image_bytes=None, image_filename=None):
+def get_rag_answer(question, image_bytes=None, image_filename=None, mode="Web"):
     tavily_result = tavily_search.invoke({"query": question})
     image_base64 = None
     if image_bytes:
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
     system_prompt = (
-        "You are an expert Indian agricultural advisor AI. "
-        "You are given a user's question and a set of search results from trusted Indian sources."
+        f"You are an expert Indian agricultural advisor AI. "
+        f"The user has chosen '{mode}' mode for their search."
         "\n\nIf the user has uploaded an image, analyze it carefully:"
         "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
         "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
@@ -141,7 +250,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if st.button("Submit", use_container_width=True):
+if submit:
     if user_query.strip() == "" and not uploaded_file:
         st.warning("Please enter a question or upload an image.")
     else:
@@ -158,7 +267,7 @@ if st.button("Submit", use_container_width=True):
                 st.session_state.messages.append({"role": "assistant", "content": response})
             else:
                 with st.spinner("Consulting AI experts..."):
-                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
+                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename, mode=mode)
                     st.markdown(rag_answer)
                     self_qa = get_self_qa(user_query)
                     st.markdown("---\n**Other questions you may have:**")
