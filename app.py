@@ -5,6 +5,11 @@ from PIL import Image
 import base64
 import time
 
+# NLP and Vision imports
+import cv2
+import numpy as np
+import speech_recognition as sr
+
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -17,185 +22,36 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Theme & Classic/Modern CSS ---
+# --- UI CSS ---
 st.markdown("""
     <style>
-        body, .stApp {
-            background: var(--sky-background, #f9fafb) !important;
-            font-family: 'Montserrat', 'Segoe UI', sans-serif;
-        }
-        .perplexity-logo {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 2rem;
-            margin-bottom: 0.5rem;
-        }
-        .perplexity-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #222;
-            margin-bottom: 0.3rem;
-            letter-spacing: -1px;
-        }
-        .perplexity-subtitle {
-            text-align: center;
-            color: #4caf50;
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-        }
-        .searchbar-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        .searchbar-main {
-            display: flex;
-            align-items: center;
-            background: #fff;
-            border-radius: 2rem;
-            border: 2px solid #e0e0e0;
-            box-shadow: 0 2px 12px #a5d6a733;
-            padding: 0.2rem 1.4rem 0.2rem 1.4rem;
-            width: 100%;
-            max-width: 600px;
-        }
-        .searchbar-main input[type="text"] {
-            flex: 1;
-            border: none;
-            background: transparent;
-            font-size: 1.25rem;
-            color: #222;
-            padding: 18px 10px 18px 0;
-            outline: none;
-        }
-        .searchbar-main input[type="text"]::placeholder {
-            color: #bdbdbd;
-            font-size: 1.15rem;
-        }
-        .searchbar-main .file-upload-label {
-            margin-left: 0.5rem;
-            cursor: pointer;
-            font-size: 1.7rem;
-            color: #4caf50;
-            transition: color 0.2s;
-        }
-        .searchbar-main .file-upload-label:hover {
-            color: #388e3c;
-        }
-        .searchbar-main .submit-btn {
-            background: #4caf50;
-            border: none;
-            border-radius: 50%;
-            width: 2.6rem;
-            height: 2.6rem;
-            margin-left: 0.5rem;
-            color: #fff;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .searchbar-main .submit-btn:hover {
-            background: #388e3c;
-        }
-        .quick-replies {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 1.2rem;
-        }
-        .quick-reply-btn {
-            background: #e8f5e9;
-            border: none;
-            color: #388e3c;
-            border-radius: 16px;
-            padding: 8px 18px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .quick-reply-btn:hover {
-            background: #a5d6a7;
-        }
-        .chat-avatar {
-            width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 2px solid #4caf50; display: inline-block; margin-right: 0.7rem; vertical-align: middle;
-        }
-        .chat-bubble {
-            display: flex; align-items: flex-start; margin-bottom: 1.1rem;
-        }
-        .chat-bubble.bot {
-            flex-direction: row;
-        }
-        .chat-bubble.user {
-            flex-direction: row-reverse;
-        }
-        .bubble-content {
-            background: #f9fbe7;
-            border-radius: 18px;
-            padding: 16px 20px;
-            box-shadow: 0 2px 8px #a5d6a733;
-            color: #2e7d32;
-            font-size: 1.07rem;
-            max-width: 65vw;
-            min-width: 120px;
-        }
-        .bubble-content.user {
-            background: #c8e6c9;
-            color: #1b5e20;
-        }
-        .typing-indicator {
-            display: inline-block;
-            margin-left: 8px;
-        }
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            margin-right: 2px;
-            background: #81c784;
-            border-radius: 50%;
-            animation: blink 1.2s infinite both;
-        }
+        body, .stApp {background: #f9fafb !important; font-family: 'Montserrat', 'Segoe UI', sans-serif;}
+        .perplexity-logo {display: flex; justify-content: center; align-items: center; margin-top: 2rem; margin-bottom: 0.5rem;}
+        .perplexity-title {text-align: center; font-size: 2.5rem; font-weight: 700; color: #222; margin-bottom: 0.3rem; letter-spacing: -1px;}
+        .perplexity-subtitle {text-align: center; color: #4caf50; font-size: 1.1rem; margin-bottom: 2.5rem;}
+        .searchbar-container {display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem;}
+        .searchbar-main {display: flex; align-items: center; background: #fff; border-radius: 2rem; border: 2px solid #e0e0e0; box-shadow: 0 2px 12px #a5d6a733; padding: 0.2rem 1.4rem 0.2rem 1.4rem; width: 100%; max-width: 600px;}
+        .searchbar-main input[type="text"] {flex: 1; border: none; background: transparent; font-size: 1.25rem; color: #222; padding: 18px 10px 18px 0; outline: none;}
+        .searchbar-main input[type="text"]::placeholder {color: #bdbdbd; font-size: 1.15rem;}
+        .searchbar-main .file-upload-label {margin-left: 0.5rem; cursor: pointer; font-size: 1.7rem; color: #4caf50; transition: color 0.2s;}
+        .searchbar-main .file-upload-label:hover {color: #388e3c;}
+        .searchbar-main .submit-btn {background: #4caf50; border: none; border-radius: 50%; width: 2.6rem; height: 2.6rem; margin-left: 0.5rem; color: #fff; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;}
+        .searchbar-main .submit-btn:hover {background: #388e3c;}
+        .voice-btn {margin-left: 0.5rem; background: #e0e0e0; border-radius: 50%; border: none; width: 2.3rem; height: 2.3rem; color: #4caf50; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; cursor: pointer;}
+        .voice-btn:hover {background: #b2dfdb;}
+        .chat-avatar {width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 2px solid #4caf50; display: inline-block; margin-right: 0.7rem; vertical-align: middle;}
+        .chat-bubble {display: flex; align-items: flex-start; margin-bottom: 1.1rem;}
+        .chat-bubble.bot {flex-direction: row;}
+        .chat-bubble.user {flex-direction: row-reverse;}
+        .bubble-content {background: #f9fbe7; border-radius: 18px; padding: 16px 20px; box-shadow: 0 2px 8px #a5d6a733; color: #2e7d32; font-size: 1.07rem; max-width: 65vw; min-width: 120px;}
+        .bubble-content.user {background: #c8e6c9; color: #1b5e20;}
+        .typing-indicator {display: inline-block; margin-left: 8px;}
+        .typing-indicator span {display: inline-block; width: 8px; height: 8px; margin-right: 2px; background: #81c784; border-radius: 50%; animation: blink 1.2s infinite both;}
         .typing-indicator span:nth-child(2) {animation-delay: 0.2s;}
         .typing-indicator span:nth-child(3) {animation-delay: 0.4s;}
-        @keyframes blink {
-            0%, 80%, 100% { opacity: 0.2; }
-            40% { opacity: 1; }
-        }
-        .emoji-picker {
-            margin-left: 0.5rem;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-        .darkmode-toggle {
-            position: fixed; top: 22px; right: 32px; z-index: 100;
-        }
+        @keyframes blink {0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; }}
     </style>
 """, unsafe_allow_html=True)
-
-# --- Dark Mode Toggle ---
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-def toggle_dark():
-    st.session_state.dark_mode = not st.session_state.dark_mode
-st.markdown(
-    f"<div class='darkmode-toggle'><button onclick='window.location.reload()' style='background:{'#222' if st.session_state.dark_mode else '#fff'};color:{'#fff' if st.session_state.dark_mode else '#4caf50'};border-radius:50%;border:none;width:38px;height:38px;font-size:1.3rem;cursor:pointer;'>{'🌙' if not st.session_state.dark_mode else '☀️'}</button></div>",
-    unsafe_allow_html=True
-)
-if st.session_state.dark_mode:
-    st.markdown("""
-        <style>
-            body, .stApp {background: #212121 !important;}
-            .searchbar-main, .bubble-content {background: #333 !important; color: #e8f5e9 !important;}
-            .bubble-content.user {background: #388e3c !important; color: #fff !important;}
-            .perplexity-title {color: #e8f5e9 !important;}
-        </style>
-    """, unsafe_allow_html=True)
 
 # --- Logo ---
 futuristic_logo_svg = """
@@ -228,30 +84,23 @@ futuristic_logo_svg = """
 </div>
 """
 st.markdown(futuristic_logo_svg, unsafe_allow_html=True)
-
 st.markdown('<div class="perplexity-title">Terrคi</div>', unsafe_allow_html=True)
-st.markdown('<div class="perplexity-subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image if you wish!</div>', unsafe_allow_html=True)
+st.markdown('<div class="perplexity-subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image or use your voice!</div>', unsafe_allow_html=True)
 
-# --- Quick Replies Example ---
-quick_replies = [
-    "How to improve rice yield?",
-    "Best fertilizer for tomatoes?",
-    "How to identify pest damage?",
-    "Soil health tips"
-]
-st.markdown('<div class="quick-replies">', unsafe_allow_html=True)
-for reply in quick_replies:
-    if st.button(reply, key=f"quick_{reply}"):
-        st.session_state["query"] = reply
-st.markdown('</div>', unsafe_allow_html=True)
+# --- Voice Input ---
+def recognize_voice():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.info("Listening... Please speak clearly.")
+        audio = recognizer.listen(source, timeout=5, phrase_time_limit=7)
+    try:
+        text = recognizer.recognize_google(audio)
+        return text
+    except Exception as e:
+        st.warning("Sorry, could not recognize your voice. Try again.")
+        return ""
 
-# --- Emoji Picker Example (simple) ---
-emoji_list = ["🌱", "🌾", "🐞", "💧", "🌻", "🧑‍🌾"]
-emoji = st.selectbox("Add emoji to your message:", [""] + emoji_list, key="emoji_picker")
-if emoji and "query" in st.session_state:
-    st.session_state["query"] += " " + emoji
-
-# --- Perplexity-style search bar: text + paperclip + submit ---
+# --- Perplexity-style search bar: text + paperclip + voice + submit ---
 with st.form("query_form", clear_on_submit=False):
     st.markdown('<div class="searchbar-container">', unsafe_allow_html=True)
     st.markdown('<div class="searchbar-main">', unsafe_allow_html=True)
@@ -261,6 +110,7 @@ with st.form("query_form", clear_on_submit=False):
     uploaded_file = st.file_uploader(
         "", type=["png", "jpg", "jpeg"], label_visibility="collapsed", accept_multiple_files=False, key="file"
     )
+    voice = st.form_submit_button("🎤", on_click=None)
     st.markdown(
         '<label for="file-upload" class="file-upload-label" title="Attach image">📎</label>',
         unsafe_allow_html=True
@@ -268,6 +118,10 @@ with st.form("query_form", clear_on_submit=False):
     submit = st.form_submit_button("➔", type="primary", use_container_width=False)
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Voice input logic ---
+if voice:
+    st.session_state["query"] = recognize_voice()
 
 # --- Image preview ---
 image_bytes = None
@@ -279,6 +133,7 @@ if uploaded_file is not None:
     image_bytes = uploaded_file.read()
     image_filename = uploaded_file.name
 
+# --- Chatbot logic ---
 def is_meta_query(q):
     meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
     return any(kw in q.lower() for kw in meta_keywords)
@@ -390,9 +245,9 @@ def show_typing():
         """.format(futuristic_logo_svg), unsafe_allow_html=True
     )
 
-if submit:
-    if user_query.strip() == "" and not uploaded_file:
-        st.warning("Please enter a question or upload an image.")
+if submit or voice:
+    if (user_query is None or user_query.strip() == "") and not uploaded_file:
+        st.warning("Please enter a question, upload an image, or use voice.")
     else:
         st.session_state.messages.append({"role": "user", "content": user_query})
         st.experimental_rerun()  # To immediately show user message
