@@ -6,9 +6,14 @@ import base64
 import time
 
 # NLP and Vision imports
-import cv2
 import numpy as np
 import speech_recognition as sr
+
+# Optional: OpenCV for advanced image processing
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
@@ -133,7 +138,6 @@ if uploaded_file is not None:
     image_bytes = uploaded_file.read()
     image_filename = uploaded_file.name
 
-# --- Chatbot logic ---
 def is_meta_query(q):
     meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
     return any(kw in q.lower() for kw in meta_keywords)
@@ -230,7 +234,6 @@ for message in st.session_state.messages:
             """, unsafe_allow_html=True
         )
 
-# --- Typing Indicator Animation ---
 def show_typing():
     st.markdown(
         """
