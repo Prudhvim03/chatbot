@@ -1,102 +1,150 @@
-import streamlit as st
-from langchain_groq import ChatGroq
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from tavily import TavilyClient
 import os
-import time
+import streamlit as st
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_tavily import TavilySearch
+from langchain_core.messages import SystemMessage, HumanMessage
 
-# --- Set your API keys here ---
-os.environ["GROQ_API_KEY"] = "YOUR_GROQ_API_KEY"      # Replace with your Groq API key
-os.environ["TAVILY_API_KEY"] = "YOUR_TAVILY_API_KEY"  # Replace with your Tavily API key
+# Load environment variables
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-# --- Farming knowledge base documents ---
-documents = [
-    "Maize requires well-drained soil and regular watering.",
-    "Rice thrives in flooded fields and warm climates.",
-    "Use organic compost to improve soil fertility.",
-    "Monitor crop health using remote sensors for early pest detection.",
-    "Crop rotation helps maintain soil health and reduce pests.",
-    "Drip irrigation conserves water and improves crop yields.",
-]
+# Set up LLM and Tavily Search
+llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
+tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Setup embeddings and vector store (FAISS) ---
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-vectorstore = FAISS.from_texts(documents, embeddings)
-retriever = vectorstore.as_retriever()
+# Unique South Indian rice farming icon (SVG)
+rice_icon_svg = """
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <ellipse cx="24" cy="38" rx="16" ry="6" fill="#9CCC65"/>
+  <path d="M24 38 Q28 25 38 18 Q28 20 24 38" fill="#FFF176"/>
+  <path d="M24 38 Q20 25 10 18 Q20 20 24 38" fill="#FFF176"/>
+  <rect x="22" y="10" width="4" height="28" rx="2" fill="#8D6E63"/>
+  <ellipse cx="24" cy="10" rx="4" ry="6" fill="#FFF176"/>
+</svg>
+"""
 
-# --- Setup Groq LLM and prompt ---
-llm = ChatGroq(model_name="llama3-70b-8192")  # Or "mixtral-8x7b-32768"
-prompt_template = """You are a helpful farming assistant. Use the following context to answer the user's question.
-Context: {context}
-Question: {question}
-Answer:"""
-prompt = ChatPromptTemplate.from_template(prompt_template)
+# South Indian theme colors
+st.markdown("""
+    <style>
+        .stApp {
+            background: linear-gradient(135deg, #f4fce3 0%, #e8f5e9 100%);
+        }
+        .rice-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: -10px;
+        }
+        .main-title {
+            text-align: center;
+            color: #388e3c;
+            font-size: 2.5rem;
+            font-family: 'Noto Serif', serif;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #795548;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .stChatInput input {
+            font-size: 1.1rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- Build RAG chain ---
-rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-)
+# Header with icon and title
+st.markdown(f'<div class="rice-icon">{rice_icon_svg}</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🌾 AI Agricultural Assistant</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Expert guidance for South Indian rice farmers - powered by AI & real-time web knowledge</div>', unsafe_allow_html=True)
 
-# --- Tavily client for web references ---
-tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+# Meta-question detection
+def is_meta_query(q):
+    meta_keywords = ["who are you", "created", "your name", "developer", "model", "prudhvi", "about you"]
+    return any(kw in q.lower() for kw in meta_keywords)
 
-def get_references(query, max_results=3):
-    try:
-        response = tavily.search(query=query, search_depth="advanced")
-        refs = []
-        for r in response.get("results", [])[:max_results]:
-            refs.append({
-                "title": r["title"],
-                "url": r["url"],
-                "snippet": r["content"][:200] + "..."
-            })
-        return refs
-    except Exception:
-        return []
+def handle_meta_query():
+    return (
+        "🌱 I was developed by Prudhvi, an engineer passionate about Indian agriculture and rice farming. "
+        "My mission is to empower South Indian farmers with practical, region-specific guidance for every stage of rice cultivation."
+    )
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Farming Solutions Chatbot", layout="wide")
-st.title("🌾 Farming Solutions Chatbot")
+def get_rag_answer(question):
+    # System prompt tailored for Indian/South Indian rice farming
+    system_prompt = (
+        "You are a South Indian agricultural expert specializing in rice farming. "
+        "Give practical, region-specific, step-by-step advice using both your knowledge and the latest information from trusted Indian agricultural sources. "
+        "Always explain in clear, simple language. If possible, mention local varieties, climate, and sustainable practices. "
+        "If you don't know, say so and suggest how to find out."
+    )
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=question)
+    ]
+    # LLM answer
+    response = llm.invoke(messages)
+    answer = response.content.strip()
+    # Retrieve supporting info via Tavily
+    tavily_result = tavily_search.invoke({"query": question})
+    # Combine LLM and search
+    combined = f"**AI Guidance:**\n{answer}\n\n**Latest Insights from Web:**\n{tavily_result}"
+    return combined
 
-# Initialize chat history
+def get_self_qa(question):
+    # Prompt LLM to generate self-questions and answers
+    prompt = (
+        "Given this user question about South Indian rice farming, generate 2-3 related follow-up questions a farmer might ask, "
+        "and answer each in detail, focusing on Indian context and practical steps. "
+        "Format:\nQ1: ...\nA1: ...\nQ2: ...\nA2: ...\n"
+        f"User question: {question}"
+    )
+    messages = [
+        SystemMessage(content="You are a helpful Indian rice farming assistant."),
+        HumanMessage(content=prompt)
+    ]
+    response = llm.invoke(messages)
+    return response.content.strip()
+
+# Chat session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat messages from history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# User input
-if prompt_text := st.chat_input("Ask your farming question here..."):
-    # Display user message
-    st.chat_message("user").markdown(prompt_text)
-    st.session_state.messages.append({"role": "user", "content": prompt_text})
+prompt = st.chat_input("Ask your question on rice farming, soil, pests, irrigation, or anything Indian agriculture…")
 
-    # Generate bot response with streaming effect
+if prompt:
+    # User message
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Assistant response
     with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
+        if is_meta_query(prompt):
+            response = handle_meta_query()
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        else:
+            with st.spinner("Consulting experts and searching the latest info..."):
+                rag_answer = get_rag_answer(prompt)
+                st.markdown(rag_answer)
+                # Self-questions and answers
+                st.markdown("---\n**Other questions you may have:**")
+                self_qa = get_self_qa(prompt)
+                st.markdown(self_qa)
+                st.session_state.messages.append({"role": "assistant", "content": rag_answer + "\n\n" + self_qa})
 
-        response = rag_chain.invoke(prompt_text)
-        answer = response.content.strip()
-
-        for word in answer.split():
-            full_response += word + " "
-            placeholder.markdown(full_response + "▌")
-            time.sleep(0.03)
-        placeholder.markdown(full_response)
-
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-    # Fetch and display references
-    references = get_references(prompt_text)
-    if references:
-        st.markdown("### 🔗 References")
-        for ref in references:
-            st.markdown(f"- [{ref['title']}]({ref['url']})  \n{ref['snippet']}")
+# Footer
+st.markdown(
+    "<div style='text-align:center; color:#607d8b; margin-top:2rem;'>"
+    "Developed for Indian farmers • Powered by Prudhvi & AI • May 2025"
+    "</div>",
+    unsafe_allow_html=True
+)
