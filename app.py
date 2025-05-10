@@ -59,8 +59,8 @@ st.markdown("""
 
 # Header with icon and title
 st.markdown(f'<div class="rice-icon">{rice_icon_svg}</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">🌾 AI Agricultural Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Expert guidance for Indian farmers - AI & real-time knowledge</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🌾 Terrคi: AI-Driven Future Farming Assistant</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Expert guidance for Indian farmers, agriculturists and Students ... - AI & real-time knowledge</div>', unsafe_allow_html=True)
 
 # Meta-question detection
 def is_meta_query(q):
