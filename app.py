@@ -8,10 +8,11 @@ from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
 
-# --- ENV ---
+# Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
@@ -22,16 +23,22 @@ st.markdown("""
             background: #f9fafb !important;
             font-family: 'Montserrat', 'Segoe UI', sans-serif;
         }
-        .centered-title {
+        .perplexity-logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .perplexity-title {
             text-align: center;
-            font-size: 2.7rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: #222;
-            margin-top: 3.5rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.6rem;
             letter-spacing: -1px;
         }
-        .subtitle {
+        .perplexity-subtitle {
             text-align: center;
             color: #4caf50;
             font-size: 1.1rem;
@@ -95,9 +102,6 @@ st.markdown("""
         .searchbar-main .submit-btn:hover {
             background: #388e3c;
         }
-        .mode-dropdown {
-            margin: 0.5rem 0 0.2rem 0;
-        }
         .uploaded-img-preview {display: flex; justify-content: center; margin-top: 1rem;}
         .stChatMessage > div {background-color: #e8f5e9 !important; border-radius: 14px !important; color: #1b5e20 !important; padding: 14px !important;}
         .stChatMessage.stChatMessage-user > div {background-color: #c8e6c9 !important; color: #2e7d32 !important; font-weight: 600;}
@@ -106,7 +110,7 @@ st.markdown("""
 
 # --- Your Logo (SVG) ---
 futuristic_logo_svg = """
-<div style="display:flex;justify-content:center;margin-bottom:0.5rem;">
+<div class="perplexity-logo">
 <svg width="60" height="60" viewBox="0 0 72 72" fill="none">
   <defs>
     <radialGradient id="glow" cx="50%" cy="50%" r="50%">
@@ -137,18 +141,8 @@ futuristic_logo_svg = """
 st.markdown(futuristic_logo_svg, unsafe_allow_html=True)
 
 # --- Centered Title and Subtitle ---
-st.markdown('<div class="centered-title">Terrคi: The Futuristic AI Farming Guide</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image if you wish!</div>', unsafe_allow_html=True)
-
-# --- Search Mode Dropdown (optional, like Perplexity) ---
-mode = st.selectbox(
-    "Search Mode",
-    options=["Web", "Academic", "Social"],
-    index=0,
-    key="search_mode",
-    help="Choose where to search for answers.",
-)
-st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div class="perplexity-title">Terrคi</div>', unsafe_allow_html=True)
+st.markdown('<div class="perplexity-subtitle">Ask about farming, soil, pests, irrigation, or anything in Indian agriculture. Attach an image if you wish!</div>', unsafe_allow_html=True)
 
 # --- Perplexity-style search bar: text + paperclip + submit ---
 with st.form("query_form", clear_on_submit=False):
@@ -190,14 +184,14 @@ def handle_meta_query():
         "combining AI with real-time knowledge and innovation."
     )
 
-def get_rag_answer(question, image_bytes=None, image_filename=None, mode="Web"):
+def get_rag_answer(question, image_bytes=None, image_filename=None):
     tavily_result = tavily_search.invoke({"query": question})
     image_base64 = None
     if image_bytes:
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
     system_prompt = (
-        f"You are an expert Indian agricultural advisor AI. "
-        f"The user has chosen '{mode}' mode for their search."
+        "You are an expert Indian agricultural advisor AI. "
+        "You are given a user's question and a set of search results from trusted Indian sources."
         "\n\nIf the user has uploaded an image, analyze it carefully:"
         "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
         "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
@@ -267,7 +261,7 @@ if submit:
                 st.session_state.messages.append({"role": "assistant", "content": response})
             else:
                 with st.spinner("Consulting AI experts..."):
-                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename, mode=mode)
+                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
                     st.markdown(rag_answer)
                     self_qa = get_self_qa(user_query)
                     st.markdown("---\n**Other questions you may have:**")
