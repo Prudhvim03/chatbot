@@ -16,7 +16,7 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 llm = ChatGroq(model="llama3-70b-8192", api_key=GROQ_API_KEY)
 tavily_search = TavilySearch(api_key=TAVILY_API_KEY, max_results=3)
 
-# --- Simple, clean theme ---
+# --- Clean theme ---
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
@@ -24,8 +24,6 @@ st.markdown("""
         .futuristic-logo {display: flex; justify-content: center; align-items: center; margin-bottom: -6px;}
         .main-title {text-align: center; color: #4caf50; font-size: 2.8rem; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 0.3rem;}
         .subtitle {text-align: center; color: #666666; font-size: 1.25rem; margin-bottom: 2rem; font-weight: 500;}
-        .stChatInput input {font-size: 1.1rem !important; background: #f1f8e9; border: 2px solid #81c784; border-radius: 12px; color: #2e7d32; padding-left: 14px; height: 40px;}
-        .stChatInput input:focus {border-color: #4caf50 !important; outline: none; box-shadow: 0 0 8px #a5d6a7;}
         .stButton>button {background-color: #4caf50; color: #ffffff; font-weight: 700; border-radius: 12px; padding: 10px 24px; border: none;}
         .stButton>button:hover {background-color: #388e3c;}
         .stMarkdown {background-color: #f9fbe7; border-radius: 14px; padding: 22px; margin-bottom: 20px; color: #2e7d32 !important;}
@@ -82,20 +80,21 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     image_base64 = None
     if image_bytes:
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-    # Prompt with image context
+    # --- Clear, explicit prompt for multimodal analysis ---
     system_prompt = (
         "You are an expert Indian agricultural advisor AI. "
         "You are given a user's question and a set of search results from trusted Indian sources."
         "\n\nIf the user has uploaded an image, analyze it carefully:"
-        "\n- If it is a plant, assess its health, explain your reasoning, and if healthy, suggest fertilizers and growth techniques; if unhealthy, suggest fertilizers and precautions to restore health."
-        "\n- If it is fertilizer, soil, or any other farming-related image, explain what the image shows, its uses, and where/when to use it."
+        "\n- If it is a plant, determine if it is healthy or unhealthy. If healthy, explain why and suggest best fertilizers and modern techniques to improve growth. "
+        "If unhealthy, explain the problems you see, suggest specific fertilizers, treatments, and precautions to restore health."
+        "\n- If it is fertilizer, soil, or any other farming-related image, explain what it is, its uses, and where/when to use it for best results."
         "\n- If you cannot identify the image, say so politely and suggest how to get more help."
-        "\n\nYour answer should be in this structure:"
-        "\n- **Image Analysis:** (if image provided) What is in the image and your assessment."
-        "\n- **Summary:** A direct answer to the user's question."
-        "\n- **Step-by-step Solution:** Detailed, region-specific, actionable advice."
-        "\n- **Confidence Level:** High/Medium/Low, based on search result quality and image clarity."
-        "\n- **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.)."
+        "\n\nYour answer must follow this structure:"
+        "\n1. **Image Analysis:** (if image provided) What is in the image and your assessment."
+        "\n2. **Summary:** A direct, concise answer to the user's question."
+        "\n3. **Step-by-step Solution:** Detailed, region-specific, actionable advice."
+        "\n4. **Confidence Level:** High/Medium/Low, based on search result quality and image clarity."
+        "\n5. **Suggested Next Steps:** If the answer is incomplete, suggest where to get more info (e.g., local agri office, helpline, etc.)."
         "\n\nHere are the search results:\n"
         f"{tavily_result}"
         "\n\nUser Question:\n"
@@ -104,7 +103,10 @@ def get_rag_answer(question, image_bytes=None, image_filename=None):
     )
     messages = [SystemMessage(content=system_prompt)]
     if image_base64:
-        messages.append(HumanMessage(content="Attached is an image uploaded by the user (base64-encoded). Please analyze it as per the instructions.", additional_kwargs={"image_base64": image_base64, "filename": image_filename}))
+        messages.append(HumanMessage(
+            content="Attached is an image uploaded by the user (base64-encoded). Please analyze it as per the instructions.",
+            additional_kwargs={"image_base64": image_base64, "filename": image_filename}
+        ))
     else:
         messages.append(HumanMessage(content=question))
     response = llm.invoke(messages)
@@ -134,8 +136,16 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- Image uploader ---
-uploaded_file = st.file_uploader("Attach a plant, fertilizer, soil, or farming image (optional)", type=["png", "jpg", "jpeg"])
+# --- Perplexity-style search bar with file upload ---
+col1, col2 = st.columns([6, 1])
+with col1:
+    user_query = st.text_input(
+        "Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…",
+        key="query", label_visibility="collapsed"
+    )
+with col2:
+    uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+
 image_bytes = None
 image_filename = None
 if uploaded_file is not None:
@@ -145,28 +155,30 @@ if uploaded_file is not None:
     image_bytes = uploaded_file.read()
     image_filename = uploaded_file.name
 
-prompt = st.chat_input("Ask about farming, soil, pests, irrigation, or anything in Indian agriculture…")
+# --- Submit button ---
+if st.button("Submit", use_container_width=True):
+    if user_query.strip() == "" and not uploaded_file:
+        st.warning("Please enter a question or upload an image.")
+    else:
+        st.session_state.messages.append({"role": "user", "content": user_query})
+        with st.chat_message("user"):
+            st.markdown(user_query)
+            if uploaded_file is not None:
+                st.image(image, caption="Your uploaded image", use_column_width=True)
 
-if prompt:
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-        if uploaded_file is not None:
-            st.image(image, caption="Your uploaded image", use_column_width=True)
-
-    with st.chat_message("assistant"):
-        if is_meta_query(prompt):
-            response = handle_meta_query()
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-        else:
-            with st.spinner("Consulting AI experts..."):
-                rag_answer = get_rag_answer(prompt, image_bytes=image_bytes, image_filename=image_filename)
-                st.markdown(rag_answer)
-                self_qa = get_self_qa(prompt)
-                st.markdown("---\n**Other questions you may have:**")
-                st.markdown(self_qa)
-                st.session_state.messages.append({"role": "assistant", "content": rag_answer + "\n\n" + self_qa})
+        with st.chat_message("assistant"):
+            if is_meta_query(user_query):
+                response = handle_meta_query()
+                st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+            else:
+                with st.spinner("Consulting AI experts..."):
+                    rag_answer = get_rag_answer(user_query, image_bytes=image_bytes, image_filename=image_filename)
+                    st.markdown(rag_answer)
+                    self_qa = get_self_qa(user_query)
+                    st.markdown("---\n**Other questions you may have:**")
+                    st.markdown(self_qa)
+                    st.session_state.messages.append({"role": "assistant", "content": rag_answer + "\n\n" + self_qa})
 
 st.markdown(
     "<div style='text-align:center; color:#888888; margin-top:3rem; font-size:0.9rem;'>"
