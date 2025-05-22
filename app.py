@@ -84,7 +84,7 @@ def short_llm_answer(question):
     tavily_result = tavily_search.invoke({"query": question})
     summary = tavily_result.get("results", [{}])[0].get("content", "")
     if summary:
-        return summary.strip().split("\n")[0][:180]  # First sentence, max 180 chars
+        return summary.strip().split("\n")[0][:500]  # First sentence, max 180 chars
     # Fallback to LLM
     system_prompt = "Answer the following farming question in one short, root-level sentence for a busy Indian farmer."
     messages = [
@@ -92,7 +92,7 @@ def short_llm_answer(question):
         HumanMessage(content=question)
     ]
     response = llm.invoke(messages)
-    return response.content.strip().split("\n")[0][:180]
+    return response.content.strip().split("\n")[0][:500]
 
 def detailed_llm_answer(question, user_name):
     # Weather queries handled separately
@@ -134,7 +134,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- UI ---
-st.title("🌾 Terrคi: Your AI Farming Assistant (by PrudhΛi)")
+st.title("Terrคi: Your AI Farming Assistant")
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -201,7 +201,7 @@ if prompt:
 # --- Footer ---
 st.markdown(
     "<div style='text-align:center; color:#8d6e63; margin-top:2rem;'>"
-    "Developed by Prudhvi (PrudhΛi) • Powered by Groq, Tavily & OpenWeather • May 2025"
+    "Developed by Prudhvi (PrudhΛi) • May 2025"
     "</div>",
     unsafe_allow_html=True
 )
